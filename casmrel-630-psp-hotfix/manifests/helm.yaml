@@ -1,0 +1,8 @@
+http://helmrepo.dev.cray.com:8080/:
+  charts:
+    cray-psp:
+    - 0.1.0
+    spire:
+    - 0.8.17
+    spire-intermediate:
+    - 0.2.2
