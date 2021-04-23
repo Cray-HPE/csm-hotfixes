@@ -1,7 +1,7 @@
 http://helmrepo.dev.cray.com:8080/:
   charts:
     cray-psp:
-    - 0.1.0
+    - 0.1.1
     spire:
     - 0.8.17
     spire-intermediate:

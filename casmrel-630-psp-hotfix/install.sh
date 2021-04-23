@@ -10,7 +10,7 @@ echo "* Upgrading spire-intermediate chart"
 helm upgrade -n vault spire-intermediate ./spire-intermediate-0.2.1.tgz
 
 echo "* Installing cray-psp WAR chart"
-helm install -n services cray-psp ./cray-psp-0.1.0.tgz
+helm install -n services cray-psp ./cray-psp-0.1.1.tgz
 
 for master in $(kubectl get nodes | grep 'master' | awk '{print $1}'); do
 echo "* Enabling PodSecurityPolicy on kube-apiserver node ${master}"
