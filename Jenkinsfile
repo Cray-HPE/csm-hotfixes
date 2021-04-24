@@ -99,7 +99,8 @@ pipeline {
             done < dist/build.txt
           '''
 
-          for(String hotfix in new File("dist/build.txt").readLines()) {
+          def hotfixes = readFile("dist/build.txt").split("\n")
+          for(String hotfix in hotfixes) {
             if(params.SLACK_CHANNEL != "") {
               slackSend(channel: params.SLACK_CHANNEL, message: "Hotfix ${hotfix} Uploaded to https://storage.googleapis.com/csm-release-public/hotfix/${hotfix}.tar.gz")
             }
