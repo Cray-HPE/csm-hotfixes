@@ -13,6 +13,10 @@ pipeline {
     timestamps()
   }
 
+  parameters {
+    string(name: 'SLACK_CHANNEL', description: 'The slack channel to send upload results to. Empty to disable. For testing you can use csm-release-alerts', defaultValue: "casm_release_management")
+  }
+
   environment {
     GCS_PREFIX="gs://csm-release-public/hotfix"
     GOOGLE_APPLICATION_CREDENTIALS=credentials('csm-gcp-release-gcs-admin')
@@ -76,20 +80,31 @@ pipeline {
         branch 'master'
       }
       steps {
-        sh '''
-          while read HOTFIX; do
-            VERSION="$([[ -f ${HOTFIX}/.version ]] && (cat ${HOTFIX}/.version |  tr -d '\n') || echo "0.0.1")"
-            DIST_FILE="dist/${HOTFIX}-${VERSION}.tar.gz"
-            GCS_FILE="${GCS_PREFIX}/${HOTFIX}-${VERSION}.tar.gz"
+        script {
+          sh '''
+            touch dist/built.txt
+            while read HOTFIX; do
+              VERSION="$([[ -f ${HOTFIX}/.version ]] && (cat ${HOTFIX}/.version |  tr -d '\n') || echo "0.0.1")"
+              DIST_FILE="dist/${HOTFIX}-${VERSION}.tar.gz"
+              GCS_FILE="${GCS_PREFIX}/${HOTFIX}-${VERSION}.tar.gz"
 
-            echo "Uploading ${DIST_FILE} to ${GCS_FILE}"
-            gsutil cp ${DIST_FILE} ${GCS_FILE}
+              echo "Uploading ${DIST_FILE} to ${GCS_FILE}"
+              gsutil cp ${DIST_FILE} ${GCS_FILE}
 
-            echo "Hotfix available at"
-            echo "https://storage.googleapis.com/csm-release-public/hotfix/${HOTFIX}-${VERSION}.tar.gz"
+              URL="https://storage.googleapis.com/csm-release-public/hotfix/${HOTFIX}-${VERSION}.tar.gz"
+              echo "Hotfix available at"
+              echo "${URL}"
 
-          done < dist/build.txt
-        '''
+              echo "${HOTIFX}-${VERSION}" >> dist/built.txt
+            done < dist/build.txt
+          '''
+
+          for(String hotfix in new File("dist/build.txt")readLines()) {
+            if(params.SLACK_CHANNEL != "") {
+              slackSend(channel: params.SLACK_CHANNEL, message: "Hotfix ${hotfix} Uploaded to https://storage.googleapis.com/csm-release-public/hotfix/${hotfix}.tar.gz")
+            }
+          }
+        }
       }
     }
   }
