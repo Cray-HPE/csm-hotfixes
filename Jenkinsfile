@@ -95,7 +95,7 @@ pipeline {
               echo "Hotfix available at"
               echo "${URL}"
 
-              echo "${HOTIFX}-${VERSION}" >> dist/built.txt
+              echo "${HOTFIX}-${VERSION}" >> dist/built.txt
             done < dist/build.txt
           '''
 

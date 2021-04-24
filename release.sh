@@ -47,6 +47,10 @@ fi
 if [[ -f "${BUILDDIR}/docker/index.yaml" ]]; then
   echo "Syncing Docker ${BUILDDIR}/docker/index.yaml"
   skopeo-sync "${BUILDDIR}/docker/index.yaml" "${BUILDDIR}/docker"
+
+  # save quay.io/skopeo/stable images for use in install.sh
+  echo "Copying skopeo image to distribution"
+  vendor-install-deps --no-cray-nexus-setup "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
 fi
 
 if [[ -f "${BUILDDIR}/rpm/index.yaml" ]]; then
@@ -64,9 +68,6 @@ if [[ -f "${BUILDDIR}/release.sh" ]]; then
   )
 fi
 
-# save quay.io/skopeo/stable images for use in install.sh
-echo "Copying skopeo image to distribution"
-vendor-install-deps --no-cray-nexus-setup "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
 
 # Package the distribution into an archive
 echo "Generating distribution tarball"
