@@ -26,4 +26,4 @@ The fix is to load the Multus image into Nexus.
 
 ## How to install
 
-Run `install.sh`
+Run the `install.sh` script in this hotfix.
