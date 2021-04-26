@@ -11,7 +11,7 @@ The Shasta 1.4 contains a security regression related to container access contro
 
 ## Run Validation Checks (Pre-Upgrade)
 
-It is important to first verify a healthy starting state. To do this, run the CSM validation checks located in the csm install [GCP PATH] document. If any problems are found, correct them and verify the appropriate validation checks before proceeding.
+It is important to first verify a healthy starting state. To do this, run the CSM validation checks located in /usr/share/doc/metal/008-CSM-VALIDATION.md. If this file is missing then please use zypper to install the docs-csm-install rpm. If any problems are found, correct them and verify the appropriate validation checks before proceeding.
 
 ## To install the PSP you need to perform the following:
 
@@ -33,8 +33,8 @@ It is important to first verify a healthy starting state. To do this, run the CS
 Run the following validation checks to ensure that everything is still working
 properly after the upgrade:
 
-1. Platform health checks from [GCP PATH]
-2. Network health checks from [GCP PATH]
+1. Platform health checks from /usr/share/doc/metal/008-CSM-VALIDATION.md
+2. Network health checks from /usr/share/doc/metal/008-CSM-VALIDATION.md
 
 Other health checks may be run as desired.
 
