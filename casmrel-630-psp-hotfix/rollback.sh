@@ -35,7 +35,7 @@ for master in $(kubectl get nodes | grep 'master' | awk '{print $1}'); do
 	  done
 
 	  if kubectl describe pod -n kube-system "kube-apiserver-${master}" | grep -q 'enable-admission-plugins=NodeRestriction,PodSecurityPolicy'; then
-	    echo "kube-apiserver-${master} pod did not restart on it's own. Forcing recreation."
+	    echo "kube-apiserver-${master} pod did not restart on its own. Forcing recreation."
 	    echo kubectl rm pod -n kube-system "kube-apiserver-${master}"
 	    sleep 10
 	  fi
@@ -57,5 +57,5 @@ done
 if [ "$fail" -eq 0 ]; then
   echo "Rollback completed."
 else
-  echo "One or more kube-apiservers failed to disable PodSecurityPolicy. Please manually disable the PSP on the problem nodes by removing PodSecutiyPolicy from the admissions-plugin line in /etc/kubernetes/manifests/kube-apiserver.yaml"
+  echo "One or more kube-apiservers failed to disable PodSecurityPolicy. Please manually disable the PSP on the problem nodes by removing PodSecurityPolicy from the admissions-plugin line in /etc/kubernetes/manifests/kube-apiserver.yaml"
 fi

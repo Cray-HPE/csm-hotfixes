@@ -27,22 +27,22 @@ fi
 
 for master in $(kubectl get nodes | grep 'master' | awk '{print $1}'); do
   if ! kubectl describe pod -n kube-system "kube-apiserver-${master}" | grep -q 'enable-admission-plugins=NodeRestriction,PodSecurityPolicy'; then
-	echo "* Enabling PodSecurityPolicy on kube-apiserver node ${master}"
-	  ssh "$master" "sed -i 's/--enable-admission-plugins=NodeRestriction$/--enable-admission-plugins=NodeRestriction,PodSecurityPolicy/' /etc/kubernetes/manifests/kube-apiserver.yaml"
+    echo "* Enabling PodSecurityPolicy on kube-apiserver node ${master}"
+    ssh "$master" "sed -i 's/--enable-admission-plugins=NodeRestriction$/--enable-admission-plugins=NodeRestriction,PodSecurityPolicy/' /etc/kubernetes/manifests/kube-apiserver.yaml"
 
-	for i in 1 2 3 4 5; do
-	  if kubectl describe pod -n kube-system "kube-apiserver-${master}" | grep -q 'enable-admission-plugins=NodeRestriction,PodSecurityPolicy'; then
-	    sleep 5
-	    break
-	  fi
-	  sleep 10
-	done
+  for i in 1 2 3 4 5; do
+    if kubectl describe pod -n kube-system "kube-apiserver-${master}" | grep -q 'enable-admission-plugins=NodeRestriction,PodSecurityPolicy'; then
+      sleep 5
+      break
+    fi
+    sleep 10
+  done
 
-	  if ! kubectl describe pod -n kube-system "kube-apiserver-${master}" | grep -q 'enable-admission-plugins=NodeRestriction,PodSecurityPolicy'; then
-	    echo "kube-apiserver-${master} pod did not restart on it's own. Forcing recreation."
-	    echo kubectl rm pod -n kube-system "kube-apiserver-${master}"
-	    sleep 10
-	  fi
+  if ! kubectl describe pod -n kube-system "kube-apiserver-${master}" | grep -q 'enable-admission-plugins=NodeRestriction,PodSecurityPolicy'; then
+    echo "kube-apiserver-${master} pod did not restart on its own. Forcing recreation."
+    kubectl rm pod -n kube-system "kube-apiserver-${master}"
+    sleep 10
+  fi
   else
     echo "* PodSecurityPolicy already enabled on kube-apiserver node ${master}"
   fi
