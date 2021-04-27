@@ -36,7 +36,7 @@ for master in $(kubectl get nodes | grep 'master' | awk '{print $1}'); do
 
 	  if kubectl describe pod -n kube-system "kube-apiserver-${master}" | grep -q 'enable-admission-plugins=NodeRestriction,PodSecurityPolicy'; then
 	    echo "kube-apiserver-${master} pod did not restart on its own. Forcing recreation."
-	    echo kubectl rm pod -n kube-system "kube-apiserver-${master}"
+	    kubectl rm pod -n kube-system "kube-apiserver-${master}"
 	    sleep 10
 	  fi
   else
