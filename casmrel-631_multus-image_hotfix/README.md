@@ -1,5 +1,7 @@
 # Missing multus image
 
+This hotfix only applies to the CSM 0.9.0 and CSM 0.9.2 releases.
+
 The image for Multus should have been loaded into Nexus but was not.
 
 This causes the Multus Pod(s) to get stuck in ImagePullBackOff if the
