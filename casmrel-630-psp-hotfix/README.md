@@ -1,4 +1,4 @@
-# Shasta CSM 1.4 Security Regression
+# Shasta 1.4 Security Regression
 
 The Shasta 1.4 contains a security regression related to container access controls relative to the underlying host. Specifically, this regression has resulted in the removal of one of the components used to enforce these access controls: Pod Security Policies. The risk related to this regression is the potential for privileged access to the underlying host in the event of a user breaking out of a given container running on the kubernetes worker, or a service running in the management plane having operationally dangerous dimensions that would otherwise be blocked by the Pod Security Policies. This regression is the result of a combination of events related to two changes as laid out below:
 
@@ -8,6 +8,8 @@ The Shasta 1.4 contains a security regression related to container access contro
 4. So we find ourselves without either OPA policies or PSP’s in place. The good news is that testing of the PSP fix is nearly complete, and will be packaged with the 1.4.2 release. Additionally, the Loftsman fix should land very soon in the upstream OSS repo, and so should facilitate rolling gatekeeper back into the platform in the 1.5 time frame.
 
 # Install instructions
+
+This hotfix requires CSM 0.9.2 that is shipped with Shasta 1.4.1. If CSM 0.9.2 is not installed then the spire pods will fail to come up due to a missing image.
 
 ## To install the PSP you need to perform the following:
 
