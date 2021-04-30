@@ -14,6 +14,7 @@ This hotfix requires CSM 0.9.2 that is shipped with Shasta 1.4.1. If CSM 0.9.2 i
 ## To install the PSP you need to perform the following:
 
 1. run the `install.sh` script in this directory
+2. If you have a spire-wait-for-postgres pod stuck in ImagePullBackOff then you can safely delete the pod by running `kubectl delete jobs -n spire -l 'app.kubernetes.io/name=spire-wait-for-postgres'`. This job is not needed for spire. If you have this issue on other wait-for-postgres pods then do not delete it unless directed by support.
 
 ## Rollback instructions
 
