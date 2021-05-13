@@ -29,78 +29,79 @@ If you see "fastdp" instead of "sleeve", you DO NOT need to perform this hotfix.
 
 To perform this hotfix you will need to reference the following documents:
 
-1. HPE Cray EX Hardware Management Administration Guide
-2. HPE Cray EX System Administration Guide
+1. *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*
+2. *HPE Cray EX System Administration Guide 1.4 S-8001*
 
 ## To change the Weave MTU you need to perform the following steps:
 
-1. Perform section 3.1 "Prepare the System for Power Off" in the System Power Off Procedures of the HPE Cray EX Hardware Management Administration Guide. 
-2. Sections 3.2, 3.3, and 3.4 can be skipped because we do not need to shutdown the Compute Nodes, User Access Nodes, or the switches.
-3. BEFORE doing section 3.5, change WEAVE_MTU value in the weave-net daemon set to *1376*.
+1. Perform section "Prepare the System for Power Off" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
+2. Skip sections "Shut Down and Power Off Compute and User Access Nodes", "Save Management Network Switch Configuration Settings", and "Power Off Compute and IO Cabinets" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
+3. BEFORE doing the next section, change WEAVE_MTU value in the weave-net daemon set to **1376**.
 
-`kubectl -n kube-system edit ds weave-net`
+   `kubectl -n kube-system edit ds weave-net`
 
-```
-    spec:
-      containers:
-      - command:
-        - /home/weave/launch.sh
-        env:
-        - name: HOSTNAME
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: spec.nodeName
-        - name: IPALLOC_RANGE
-          value: 10.32.0.0/12
-        - name: WEAVE_MTU
-          value: "1376"
-        - name: INIT_CONTAINER
-          value: "true"
-```
+   ```
+       spec:
+         containers:
+         - command:
+           - /home/weave/launch.sh
+           env:
+           - name: HOSTNAME
+             valueFrom:
+               fieldRef:
+                 apiVersion: v1
+                 fieldPath: spec.nodeName
+           - name: IPALLOC_RANGE
+             value: 10.32.0.0/12
+           - name: WEAVE_MTU
+             value: "1376"
+           - name: INIT_CONTAINER
+             value: "true"
+   ```
 
 4. After this edit, the weave-net daemon set will automatically do a rolling restart.   Wait for this rollout to complete.  
 
-You can use the following command to monitor this rollout.
+   You can use the following command to monitor this rollout.
 
-`kubectl -n kube-system rollout status ds weave-net`
+   `kubectl -n kube-system rollout status ds weave-net`
 
-5. Perform section 3.5 to Shut Down and Power Off the Management Kubernetes Cluster
 
-6. Section 3.6 can be skipped because the Lustre filesystem does not need to be shutdown.
+5. Perform section "Shut Down and Power Off the Management Kubernetes Cluster" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
 
-7. Perform section 4.1 of the HPE Cray EX Hardware Management Administration Guide to Power On and Start the Management Kubernetes Cluster 
+6. Skip section "Power Off the External Lustre File System" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
 
-8. Run the following test *on all master and worker NCNs* to check the spire-agent services on the NCNs
+7. Perform section "Power On and Start the Management Kubernetes Cluster" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
 
-`goss -g /opt/cray/tests/install/ncn/tests/goss-spire-agent-service-running.yaml validate`
+8. Run the following test **on all master and worker NCNs** to check the spire-agent services on the NCNs
 
-If the test shows that the spire-agent is not running on any of those NCNs, refer to section 8.7 "Troubleshoot SPIRE Failing to Start on NCNs" of the HPE Cray EX System Administration Guide to resolve those issues.
+   `goss -g /opt/cray/tests/install/ncn/tests/goss-spire-agent-service-running.yaml validate`
 
-9. Sections 4.2 and 4.3 can be skipped since those components were not shutdown.
+    If the test shows that the spire-agent is not running on any of those NCNs, refer to section "Troubleshoot SPIRE Failing to Start on NCNs" in *HPE Cray EX System Administration Guide 1.4 S-8001* to resolve those issues.
 
-10. Perform seciton 4.4 to bring up the Slingshot Fabric
+9. Skip section "Power On the External Lustre File System" and "Power On Compute and IO Cabinets" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
 
-11. Section 4.5 and 4.6 can be skipped since those components were not shutdown.
+10. Perform section "Bring Up the Slingshot Fabric" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
+
+11. Skip sections "Power On and Boot Compute and User Access Nodes" and "Recover from a Liquid Cooled Cabinet EPO Event" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
 
 12. Verify that weave is now in `fastdp` mode by performing the following command again on ncn-m001.
 
-`weave --local status connections`
+   `weave --local status connections`
 
-Output should look similar to the following:
+   Output should look similar to the following:
 
-```
-ncn-m001:~ # weave --local status connections
-<- 10.252.1.12:52577     established fastdp 9a:68:96:e5:f9:ea(ncn-w003) mtu=1376
-<- 10.252.1.8:53231      established fastdp 72:d5:3d:2c:5a:cd(ncn-m002) mtu=1376
-<- 10.252.1.9:39519      established fastdp ce:c0:ba:62:e3:59(ncn-m003) mtu=1376
-<- 10.252.1.11:43385     established fastdp 7e:0f:44:0e:ac:a8(ncn-w002) mtu=1376
-<- 10.252.1.14:52583     established fastdp 1a:72:41:ae:10:4b(ncn-w005) mtu=1376
-<- 10.252.1.13:41137     established fastdp ce:ff:ce:3f:2e:7d(ncn-w004) mtu=1376
-<- 10.252.1.10:43771     established fastdp 3e:62:44:16:89:45(ncn-w001) mtu=1376
-```
+   ```
+   ncn-m001:~ # weave --local status connections
+   <- 10.252.1.12:52577     established fastdp 9a:68:96:e5:f9:ea(ncn-w003) mtu=1376
+   <- 10.252.1.8:53231      established fastdp 72:d5:3d:2c:5a:cd(ncn-m002) mtu=1376
+   <- 10.252.1.9:39519      established fastdp ce:c0:ba:62:e3:59(ncn-m003) mtu=1376
+   <- 10.252.1.11:43385     established fastdp 7e:0f:44:0e:ac:a8(ncn-w002) mtu=1376
+   <- 10.252.1.14:52583     established fastdp 1a:72:41:ae:10:4b(ncn-w005) mtu=1376
+   <- 10.252.1.13:41137     established fastdp ce:ff:ce:3f:2e:7d(ncn-w004) mtu=1376
+   <- 10.252.1.10:43771     established fastdp 3e:62:44:16:89:45(ncn-w001) mtu=1376
+   ```
 
 ## Rollback instructions
 
-To Rollback the Weave MTU hotfix you need to perform the same set of instructions above using MTU of 1460 instead of 1376. 
+To rollback the Weave MTU hotfix you need to perform the same set of instructions above using MTU of 1460 instead of 1376.
 
