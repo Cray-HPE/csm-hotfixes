@@ -36,6 +36,7 @@ To perform this hotfix you will need to reference the following documents:
 
 1. Download and install the latest csm-install-workarounds rpm from https://storage.googleapis.com/csm-release-public/shasta-1.4/csm-install-workarounds/csm-install-workarounds-latest.noarch.rpm on ncn-m001.
 1. Run the CASMINST-1612 workaround located in /opt/cray/csm/workarounds/livecd-post-reboot/CASMINST-1612.
+1. Run the CASMINST-2067 workaround located in /opt/cray/csm/workarounds/livecd-post-reboot/CASMINST-2067.
 1. Perform section "Prepare the System for Power Off" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
 1. Skip sections "Shut Down and Power Off Compute and User Access Nodes", "Save Management Network Switch Configuration Settings", and "Power Off Compute and IO Cabinets" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
 1. BEFORE doing the next section, change WEAVE_MTU value in the weave-net daemon set to **1376**.
