@@ -26,3 +26,9 @@ skopeo-sync "${ROOTDIR}/docker"
 loftsman ship --charts-repo https://packages.local/repository/charts --manifest-path "${workdir}/sysmgmt.yaml"
 
 clean-install-deps
+
+mkdir -p /opt/cray/ncn
+cp ./set-bmc-ntp-dns.sh /opt/cray/ncn/
+chmod 755 /opt/cray/ncn/set-bmc-ntp-dns.sh
+
+echo "Please run '/opt/cray/ncn/set-bmc-ntp-dns.sh -h'"
