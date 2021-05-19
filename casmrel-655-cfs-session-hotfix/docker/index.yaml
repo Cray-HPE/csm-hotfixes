@@ -1,0 +1,5 @@
+dtr.dev.cray.com:
+  tls-verify: true
+  images:
+    cray/cray-cfs-operator:
+    - 1.10.22
