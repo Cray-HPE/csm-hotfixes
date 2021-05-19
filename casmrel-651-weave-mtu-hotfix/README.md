@@ -37,8 +37,7 @@ To perform this hotfix you will need to reference the following documents:
 1. Download and install the latest csm-install-workarounds rpm from https://storage.googleapis.com/csm-release-public/shasta-1.4/csm-install-workarounds/csm-install-workarounds-latest.noarch.rpm on ncn-m001.
 1. Run the CASMINST-1612 workaround located in /opt/cray/csm/workarounds/livecd-post-reboot/CASMINST-1612.
 1. Run the CASMINST-2067 workaround located in /opt/cray/csm/workarounds/livecd-post-reboot/CASMINST-2067.
-1. Perform section "Prepare the System for Power Off" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
-1. Skip sections "Shut Down and Power Off Compute and User Access Nodes", "Save Management Network Switch Configuration Settings", and "Power Off Compute and IO Cabinets" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
+1. Perform sections "Prepare the System for Power Off", "Shut Down and Power Off Compute and User Access Nodes", "Save Management Network Switch Configuration Settings", and "Power Off Compute and IO Cabinets" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
 1. BEFORE doing the next section, change WEAVE_MTU value in the weave-net daemon set to **1376**.
 
    `kubectl -n kube-system edit ds weave-net`
@@ -69,11 +68,7 @@ To perform this hotfix you will need to reference the following documents:
    `kubectl -n kube-system rollout status ds weave-net`
 
 
-1. Perform section "Shut Down and Power Off the Management Kubernetes Cluster" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
-
-1. Skip section "Power Off the External Lustre File System" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
-
-1. Perform section "Power On and Start the Management Kubernetes Cluster" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
+1. Perform sections "Shut Down and Power Off the Management Kubernetes Cluster", "Power Off the External Lustre File System", and "Power On and Start the Management Kubernetes Cluster" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
 
 1. Run the following test **on all master and worker NCNs** to check the spire-agent services on the NCNs
 
@@ -81,11 +76,7 @@ To perform this hotfix you will need to reference the following documents:
 
     If the test shows that the spire-agent is not running on any of those NCNs, refer to section "Troubleshoot SPIRE Failing to Start on NCNs" in *HPE Cray EX System Administration Guide 1.4 S-8001* to resolve those issues.
 
-1. Skip section "Power On the External Lustre File System" and "Power On Compute and IO Cabinets" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
-
-1. Perform section "Bring Up the Slingshot Fabric" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
-
-1. Skip sections "Power On and Boot Compute and User Access Nodes" and "Recover from a Liquid Cooled Cabinet EPO Event" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
+1. Perform sections "Power On the External Lustre File System", "Power On Compute and IO Cabinets", "Bring Up the Slingshot Fabric", "Power On and Boot Compute and User Access Nodes" and "Recover from a Liquid Cooled Cabinet EPO Event" in *HPE Cray EX Hardware Management Administration Guide 1.4 S-8015*.
 
 1. Verify that weave is now in `fastdp` mode by performing the following command again on ncn-m001.
 
