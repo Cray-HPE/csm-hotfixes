@@ -53,3 +53,11 @@ You can do the same as above if you prefer, but but 1.5 systems will have the co
 # Run all necessary steps to configure HPE hardware (see -h for examples of everything it does)
 /opt/cray/ncn/set-bmc-ntp-dns.sh -A
 ```
+
+# Instructions to fix the kubelet and kube-proxy target down prometheus alerts
+
+   > **NOTE**: These scripts should be run from a kubernetes node (master or worker).  ***Also note it can take several minutes for the target down alerts to clear after the scripts have been executed.***
+
+   1. Run the `fix-kube-proxy-target-down-alert.sh` script in this hotfix to fix the kube-proxy alert.
+   2. Run the `fix-kubelet-target-down-alert.sh` script in this hotfix to fix the kube-proxy alert.
+
