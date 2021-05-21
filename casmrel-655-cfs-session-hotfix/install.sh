@@ -13,17 +13,32 @@ trap "rm -fr '${workdir}'" EXIT
 # Get installed sysmgmt manifest, which includes customizations
 kubectl get cm -n loftsman loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}'  > "${workdir}/sysmgmt.yaml"
 
+# Get installed core-services manifest, which includes customizations
+kubectl get cm -n loftsman loftsman-core-services -o jsonpath='{.data.manifest\.yaml}'  > "${workdir}/core-services.yaml"
+
 # Add hotfix changes to cray-cfs-operator chart
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-cfs-operator).values.cray-service.containers.cray-cfs-operator.image.tag' 1.10.22
+
+# Add hotfix changes to cray-dns-chart chart
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-cfs-operator).values.cray-service.containers.cray-cfs-operator.image.pullPolicy' IfNotPresent
+
+# add hotifx changes to cray-dns-unbound
+yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).version' 0.1.17
+yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.global.appVersion'  0.1.17
 
 load-install-deps
 
 # Sync container images to Nexus registry
 skopeo-sync "${ROOTDIR}/docker"
 
+# Sync charts to Nexus registry
+nexus-upload helm "${ROOTDIR}/helm" "${CHARTS_REPO:-"charts"}"
+
 # Deploy fixed sysmgmt manifest
 loftsman ship --charts-repo https://packages.local/repository/charts --manifest-path "${workdir}/sysmgmt.yaml"
+
+# Deploy fixed core-services manifest
+loftsman ship --charts-repo https://packages.local/repository/charts --manifest-path "${workdir}/core-services.yaml"
 
 clean-install-deps
 
