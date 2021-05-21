@@ -18,13 +18,11 @@ kubectl get cm -n loftsman loftsman-core-services -o jsonpath='{.data.manifest\.
 
 # Add hotfix changes to cray-cfs-operator chart
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-cfs-operator).values.cray-service.containers.cray-cfs-operator.image.tag' 1.10.22
-
-# Add hotfix changes to cray-dns-chart chart
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-cfs-operator).values.cray-service.containers.cray-cfs-operator.image.pullPolicy' IfNotPresent
 
 # add hotifx changes to cray-dns-unbound
-yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).version' 0.1.17
-yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.global.appVersion'  0.1.17
+yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).version' 0.1.18
+yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.global.appVersion' 0.1.18
 
 load-install-deps
 
