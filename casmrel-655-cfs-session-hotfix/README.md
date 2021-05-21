@@ -61,3 +61,8 @@ You can do the same as above if you prefer, but but 1.5 systems will have the co
    1. Run the `fix-kube-proxy-target-down-alert.sh` script in this hotfix to fix the kube-proxy alert.
    2. Run the `fix-kubelet-target-down-alert.sh` script in this hotfix to fix the kube-proxy alert.
 
+# Instructions for installing node-exporter on Utility Storage nodes
+
+   > **NOTE**: This script should be run on each storage node.
+
+   1. Run the `install-node_exporter-storage.sh` script in this hotfix to enable the node-exporter.
