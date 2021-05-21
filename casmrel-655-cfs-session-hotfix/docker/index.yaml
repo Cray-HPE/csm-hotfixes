@@ -3,3 +3,5 @@ dtr.dev.cray.com:
   images:
     cray/cray-cfs-operator:
     - 1.10.22
+    cray/cray-dns-unbound:
+    - 0.1.17
