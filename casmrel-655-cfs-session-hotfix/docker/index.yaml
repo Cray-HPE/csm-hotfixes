@@ -4,4 +4,4 @@ dtr.dev.cray.com:
     cray/cray-cfs-operator:
     - 1.10.22
     cray/cray-dns-unbound:
-    - 0.1.17
+    - 0.1.18
