@@ -5,10 +5,14 @@ set -o xtrace
 
 ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOTDIR}/lib/install.sh"
+source "${ROOTDIR}/update_host_records.sh"
 
 # Create scratch space
 workdir="$(mktemp -d)"
 trap "rm -fr '${workdir}'" EXIT
+
+# update /etc/hosts on ncn workers
+update_host_records
 
 # Get installed sysmgmt manifest, which includes customizations
 kubectl get cm -n loftsman loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}'  > "${workdir}/sysmgmt.yaml"
