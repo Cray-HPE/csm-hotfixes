@@ -11,7 +11,7 @@ source "${ROOTDIR}/update_host_records.sh"
 workdir="$(mktemp -d)"
 trap "rm -fr '${workdir}'" EXIT
 
-# update /etc/hosts on ncn workers
+# Update /etc/hosts on ncn workers
 update_host_records
 
 # Get installed sysmgmt manifest, which includes customizations
