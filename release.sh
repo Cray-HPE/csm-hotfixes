@@ -47,8 +47,16 @@ fi
 if [[ -f "${BUILDDIR}/docker/index.yaml" ]]; then
   echo "Syncing Docker ${BUILDDIR}/docker/index.yaml"
   skopeo-sync "${BUILDDIR}/docker/index.yaml" "${BUILDDIR}/docker"
+fi
 
-  # save quay.io/skopeo/stable images for use in install.sh
+
+if [[ -f "${BUILDDIR}/helm/index.yaml" && -f "${BUILDDIR}/docker/index.yaml" ]]; then
+  echo "Copying cray-nexus-setup and skopeo image to distribution"
+  vendor-install-deps "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
+elif [[ -f "${BUILDDIR}/helm/index.yaml" ]]; then
+  echo "Copying cray-nexus-setup image to distribution"
+  vendor-install-deps --no-skopeo "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
+elif [[ -f "${BUILDDIR}/docker/index.yaml" ]]; then
   echo "Copying skopeo image to distribution"
   vendor-install-deps --no-cray-nexus-setup "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
 fi
