@@ -42,6 +42,10 @@ rsync -aq "${ROOTDIR}/vendor/stash.us.cray.com/scm/shastarelm/release/lib/" "${B
 if [[ -f "${BUILDDIR}/helm/index.yaml" ]]; then
   echo "Syncing Helm ${BUILDDIR}/helm/index.yaml"
   helm-sync "${BUILDDIR}/helm/index.yaml" "${BUILDDIR}/helm"
+
+  # save cray-nexus-setup images for use in install.sh
+  echo "Copying cray-nexus-setup image to distribution"
+  vendor-install-deps --no-skopeo "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
 fi
 
 if [[ -f "${BUILDDIR}/docker/index.yaml" ]]; then
