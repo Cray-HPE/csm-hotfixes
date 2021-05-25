@@ -14,19 +14,11 @@ trap "rm -fr '${workdir}'" EXIT
 # Update /etc/hosts on ncn workers
 update_host_records
 
-# Get installed sysmgmt manifest, which includes customizations
-kubectl get cm -n loftsman loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}'  > "${workdir}/sysmgmt.yaml"
+# Get the systems customizations.yaml
+kubectl get secrets -n loftsman site-init -o jsonpath='{.data.customizations\.yaml}' | base64 -d > "${workdir}/customizations.yaml"
 
-# Get installed core-services manifest, which includes customizations
-kubectl get cm -n loftsman loftsman-core-services -o jsonpath='{.data.manifest\.yaml}'  > "${workdir}/core-services.yaml"
-
-# Add hotfix changes to cray-cfs-operator chart
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-cfs-operator).values.cray-service.containers.cray-cfs-operator.image.tag' 1.10.22
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-cfs-operator).values.cray-service.containers.cray-cfs-operator.image.pullPolicy' IfNotPresent
-
-# add hotifx changes to cray-dns-unbound
-yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).version' 0.1.18
-yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.global.appVersion' 0.1.18
+# Add customizations to the hotfix manifest.yaml
+manifestgen -i ./manifests/casmrel-655.yaml -c "${workdir}/customizations.yaml" -o "${workdir}/casmrel-655.yaml" 
 
 load-install-deps
 
@@ -36,11 +28,8 @@ skopeo-sync "${ROOTDIR}/docker"
 # Sync charts to Nexus registry
 nexus-upload helm "${ROOTDIR}/helm" "${CHARTS_REPO:-"charts"}"
 
-# Deploy fixed sysmgmt manifest
-loftsman ship --charts-repo https://packages.local/repository/charts --manifest-path "${workdir}/sysmgmt.yaml"
-
-# Deploy fixed core-services manifest
-loftsman ship --charts-repo https://packages.local/repository/charts --manifest-path "${workdir}/core-services.yaml"
+# Deploy the hotfix manifest
+loftsman ship --charts-repo https://packages.local/repository/charts --manifest-path "${workdir}/casmrel-655.yaml"
 
 clean-install-deps
 

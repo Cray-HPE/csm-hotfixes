@@ -1,0 +1,25 @@
+apiVersion: manifests/v1beta1
+metadata:
+  name: casmrel-655-hotfix
+spec:
+  charts: 
+  
+  # CFS operator
+  - name: cray-cfs-operator
+    version: 1.9.18
+    namespace: services
+    values:
+      cray-service:
+        containers:
+          cray-cfs-operator:
+            image:
+              tag: 1.10.22
+              pullPolicy: IfNotPresent
+
+  # Cray DNS unbound (resolver)
+  - name: cray-dns-unbound
+    version: 0.1.18
+    namespace: services
+    values:
+      global:
+        appVersion: 0.1.18
