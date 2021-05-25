@@ -48,4 +48,4 @@ mkdir -p /opt/cray/ncn
 cp ./set-bmc-ntp-dns.sh /opt/cray/ncn/
 chmod 755 /opt/cray/ncn/set-bmc-ntp-dns.sh
 
-echo "Please run '/opt/cray/ncn/set-bmc-ntp-dns.sh -h'"
+echo "install.sh has completed"
