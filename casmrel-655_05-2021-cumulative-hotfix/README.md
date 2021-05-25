@@ -32,15 +32,17 @@ condition is hit.
    ```bash
    ncn-m001# \
    for h in $( grep ncn /etc/hosts | grep nmn | grep -v m001 | awk '{print $2}' ); do
+      pdsh -w $h "mkdir -p /opt/cray/ncn"
       scp ./set-bmc-ntp-dns.sh root@$h:/opt/cray/ncn/set-bmc-ntp-dns.sh
+      pdsh -w $h "chmod 755 /opt/cray/ncn/set-bmc-ntp-dns.sh"
    done
    ```
 
-4. Run the NTP DNS BMC script (`/opt/cray/ncn/set-bmc-ntp-dns.sh`) on HPE NCNs. For Gigabyte or Intel NCNs this step can be skipped.
+4. Run the NTP DNS BMC script (`/opt/cray/ncn/set-bmc-ntp-dns.sh`) on HPE NCNs. For Gigabyte or Intel NCNs this **step can be skipped**.
 
    > Pass `-h` to see some examples and use the information below to run the script.
 
-   > The following process can restoring NTP and DNS server values after a firmware is update to HPE NCNs. If you update the System ROM of a NCN, you will lose NTP and DNS server values.  Correctly setting these also allows FAS to function properly.
+   > The following process can restoring NTP and DNS server values after a firmware is update to HPE NCNs. If you update the System ROM of a NCN, you will lose NTP and DNS server values. Correctly setting these also allows FAS to function properly.
 
    1. Determine HMN IP address for m001:
       ```bash

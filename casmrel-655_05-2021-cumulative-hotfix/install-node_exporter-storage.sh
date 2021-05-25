@@ -40,4 +40,4 @@ chmod 644 /etc/systemd/system/node_exporter.service
 
 systemctl start node_exporter
 
-systemctl status node_exporter
+systemctl --no-pager status node_exporter
