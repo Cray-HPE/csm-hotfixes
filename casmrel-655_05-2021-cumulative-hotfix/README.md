@@ -1,7 +1,7 @@
-# CFS sessions stuck with no job
-
+# CASMREL-655 May 2021 Cumulative Hotfix
 This hotfix only applies to the CSM 0.9.3 release.
 
+# CFS sessions stuck with no job
 A race condition sometimes caused CFS sessions to never start a job, which could
 in turn block other sessions targeting the same nodes from starting.
 
