@@ -32,7 +32,9 @@ condition is hit.
 
 If you update the System ROM of a NCN, you will lose NTP and DNS server values.  Correctly setting these also allows FAS to function properly.
 
-## Instructions for 1.4.x systems or 1.4.x upgraded to 1.5.x
+## Instructions for 1.4.x systems
+
+The script mentioned below should be run on each NCN.
 
 There is new metadata for NTP in 1.5, so for 1.4 systems, it's recommended that you use the `-N server1,server2 -n` flags and the `-D server1,server2 -d` to set the NTP and DNS servers, respectively using custom values you pass in:
 
@@ -43,15 +45,6 @@ There is new metadata for NTP in 1.5, so for 1.4 systems, it's recommended that 
 /opt/cray/ncn/set-bmc-ntp-dns.sh -N time-hmn,ncn-m001 -n
 # Set DNS servers with manually defined servers
 /opt/cray/ncn/set-bmc-ntp-dns.sh -D ncn-m001,time.nist.gov -d
-```
-
-## Instructions for **freshly** installed 1.5.x systems
-
-You can do the same as above if you prefer, but but 1.5 systems will have the correct meta-data, so it will use servers you have already defined there.  There is an additional step for HPE hardware that disables DHCP.
-
-```bash
-# Run all necessary steps to configure HPE hardware (see -h for examples of everything it does)
-/opt/cray/ncn/set-bmc-ntp-dns.sh -A
 ```
 
 # Instructions to fix the kubelet and kube-proxy target down prometheus alerts
