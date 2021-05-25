@@ -17,8 +17,8 @@ function update_host_records() {
 
     for host in $ncn_workers; do
         # Check for existing records and remove entries
-        packages_count=$(pdsh -w $host cat /etc/hosts|grep packages.local|wc -l)
-        registry_count=$(pdsh -w $host cat /etc/hosts|grep registry.local|wc -l)
+        packages_count=$(pdsh -w $host cat /etc/hosts | { grep packages.local || true; } | wc -l)
+        registry_count=$(pdsh -w $host cat /etc/hosts | { grep registry.local || true; } | wc -l)
         if [[ "$packages_count" -gt "0" ]];then
             pdsh -w $host "sed -i '/packages.local/d' /etc/hosts"
         fi
