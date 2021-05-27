@@ -23,3 +23,7 @@ spec:
     values:
       global:
         appVersion: 0.1.18
+  # Cray DHCP Kea (dhcp server)
+  - name: cray-dhcp-kea
+    version: 0.4.21
+    namespace: services

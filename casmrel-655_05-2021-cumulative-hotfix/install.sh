@@ -6,7 +6,7 @@ set -o xtrace
 ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOTDIR}/lib/install.sh"
 source "${ROOTDIR}/update_host_records.sh"
-source "${ROOTDIR}/kea-update-traffic-policy.sh"
+
 
 # Create scratch space
 workdir="$(mktemp -d)"

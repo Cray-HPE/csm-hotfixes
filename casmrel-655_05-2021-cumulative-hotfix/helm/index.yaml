@@ -2,3 +2,5 @@ http://helmrepo.dev.cray.com:8080/:
   charts:
     cray-dns-unbound:
     - 0.1.18
+    cray/cray-dhcp-kea:
+      - 0.4.21
