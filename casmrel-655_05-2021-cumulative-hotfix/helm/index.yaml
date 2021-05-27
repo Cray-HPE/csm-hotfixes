@@ -3,4 +3,4 @@ http://helmrepo.dev.cray.com:8080/:
     cray-dns-unbound:
     - 0.1.18
     cray/cray-dhcp-kea:
-      - 0.4.21
+      - 0.4.22
