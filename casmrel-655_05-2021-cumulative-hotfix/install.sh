@@ -15,9 +15,6 @@ trap "rm -fr '${workdir}'" EXIT
 # Update /etc/hosts on ncn workers
 update_host_records
 
-# update kea traffic policy
-update_kea_traffic_policy
-
 # Get the systems customizations.yaml
 kubectl get secrets -n loftsman site-init -o jsonpath='{.data.customizations\.yaml}' | base64 -d > "${workdir}/customizations.yaml"
 
