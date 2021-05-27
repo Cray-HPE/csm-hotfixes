@@ -7,6 +7,7 @@ condition is hit.
 * Configure NTP and DNS for HPE NCN BMCs. 
 * Unbound no longer forwards requests to Shasta zones to site DNS.
 * Add static entries for `registry.local` and `packages.local` to the `/etc/hosts` files on the worker nodes.
+* Update Kea externTrafficPolicy from `Cluster` to `Local`  
 * Prometheus can now to scrape kubelet/kube-proxy for metrics.
 * Install node-exporter on storage nodes.
 

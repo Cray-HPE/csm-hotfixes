@@ -6,6 +6,7 @@ set -o xtrace
 ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOTDIR}/lib/install.sh"
 source "${ROOTDIR}/update_host_records.sh"
+source "${ROOTDIR}/kea-update-traffic-policy.sh"
 
 # Create scratch space
 workdir="$(mktemp -d)"
@@ -13,6 +14,9 @@ trap "rm -fr '${workdir}'" EXIT
 
 # Update /etc/hosts on ncn workers
 update_host_records
+
+# update kea traffic policy
+update_kea_traffic_policy
 
 # Get the systems customizations.yaml
 kubectl get secrets -n loftsman site-init -o jsonpath='{.data.customizations\.yaml}' | base64 -d > "${workdir}/customizations.yaml"
