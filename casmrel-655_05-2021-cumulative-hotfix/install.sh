@@ -7,6 +7,7 @@ ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOTDIR}/lib/install.sh"
 source "${ROOTDIR}/update_host_records.sh"
 
+
 # Create scratch space
 workdir="$(mktemp -d)"
 trap "rm -fr '${workdir}'" EXIT
