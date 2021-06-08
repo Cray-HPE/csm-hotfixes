@@ -3,6 +3,8 @@ http://helmrepo.dev.cray.com:8080/:
     cray-dns-unbound:
     - 0.1.18
     cray-dhcp-kea:
-      - 0.4.22
+    - 0.4.22
     cray-cfs-operator:
-      - 1.9.18
+    - 1.9.18
+    cray-bos:
+    - 1.6.22

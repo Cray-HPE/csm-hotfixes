@@ -10,6 +10,8 @@ condition is hit.
 * Update Kea externTrafficPolicy from `Cluster` to `Local`  
 * Prometheus can now to scrape kubelet/kube-proxy for metrics.
 * Install node-exporter on storage nodes.
+* BOS will now leave any nodes that it cannot communicate with behind. These nodes will not prolong a BOS session. A message describing how to relaunch BOS to pick up any failing nodes is output in the log for the BOA pod corresponding to the BOS session.
+
 
 ## Install
 
