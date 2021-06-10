@@ -27,3 +27,8 @@ spec:
   - name: cray-dhcp-kea
     version: 0.4.22
     namespace: services
+
+   # Cray BOS
+   - name: cray-bos
+     version: 1.6.22
+     namespace: services
