@@ -44,7 +44,7 @@ pipeline {
     stage('Find hotfixes to build') {
       steps {
         sh '''
-          for HOTFIX in casmrel-* ; do
+          for HOTFIX in $(find . -type d -name '*-*' -maxdepth 1 | sed 's|^\\./||') ; do
             VERSION="$([[ -f ${HOTFIX}/.version ]] && (cat ${HOTFIX}/.version |  tr -d '\n') || echo "0.0.1")"
             GCS_FILE="${GCS_PREFIX}/${HOTFIX}-${VERSION}.tar.gz"
 
