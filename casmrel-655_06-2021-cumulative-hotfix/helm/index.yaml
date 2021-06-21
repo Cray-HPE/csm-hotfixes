@@ -8,3 +8,5 @@ http://helmrepo.dev.cray.com:8080/:
     - 1.9.18
     cray-bos:
     - 1.6.22
+    gitea:
+    - 1.8.12

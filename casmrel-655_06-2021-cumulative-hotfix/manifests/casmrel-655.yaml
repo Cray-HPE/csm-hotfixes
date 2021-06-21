@@ -28,7 +28,19 @@ spec:
     version: 0.4.22
     namespace: services
 
-   # Cray BOS
-   - name: cray-bos
-     version: 1.6.22
-     namespace: services
+  # Cray BOS
+  - name: cray-bos
+    version: 1.6.22
+    namespace: services
+
+  # Gitea
+  - name: gitea
+    version: 1.8.12
+    namespace: services
+    values:
+      keycloakImage:
+        tag: 0.12.5
+      cray-service:
+        persistentVolumeClaims:
+          data-claim:
+            name: data-claim
