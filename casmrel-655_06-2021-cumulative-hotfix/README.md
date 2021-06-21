@@ -11,16 +11,25 @@ condition is hit.
 * Prometheus can now to scrape kubelet/kube-proxy for metrics.
 * Install node-exporter on storage nodes.
 * BOS will now leave any nodes that it cannot communicate with behind. These nodes will not prolong a BOS session. A message describing how to relaunch BOS to pick up any failing nodes is output in the log for the BOA pod corresponding to the BOS session.
+* Updates the VCS PVC name so that it can be found on system restart.
 
 
 ## Install
+1.  Run the `vcs_backup.sh` script in this hotfix to backup all VCS content to a temporary location. Confirm that this script has created a local tar file called `vcs.tar` that contains the git data.  Once `install.sh` is run, the git data will not be recoverable if this step failed.
+   ```bash
+   ncn-m001# ./vcs_backup.sh
+   ```
+It is also recommended that you save the VCS password to a safe location prior to making changes to VCS.  The password can can be retrieved with:
+   ```bash
+   ncn-m001# kubectl get secret -n services vcs-user-credentials --template={{.data.vcs_password}} | base64 --decode; echo ""
+   ```
 
-1. Run the `install.sh` script in this hotfix to deploy an updated cfs-operator and unbound. This also deploys a script to `/opt/cray/ncn/set-bmc-ntp-dns.sh` on the current node.
+2. Run the `install.sh` script in this hotfix to deploy an updated cfs-operator and unbound. This also deploys a script to `/opt/cray/ncn/set-bmc-ntp-dns.sh` on the current node.
    ```bash
    ncn-m001# ./install.sh
    ```
 
-2. Remove old stuck sessions.
+3. Remove old stuck sessions.
 
    This fix only applies to new sessions and will not correct sessions that are
    already in the stuck state.  Run the following command to delete all sessions
@@ -31,7 +40,7 @@ condition is hit.
    cray cfs sessions list --format json | jq -r '.[] | select(.status.session.startTime==null) | .name' | while read name ; do cray cfs sessions delete $name; done
    ```
 
-3. Copy the script `set-bmc-ntp-dns.sh` to each of the NCNs:
+4. Copy the script `set-bmc-ntp-dns.sh` to each of the NCNs:
    ```bash
    ncn-m001# \
    for h in $( grep ncn /etc/hosts | grep nmn | grep -v m001 | awk '{print $2}' ); do
@@ -41,7 +50,7 @@ condition is hit.
    done
    ```
 
-4. Run the NTP DNS BMC script (`/opt/cray/ncn/set-bmc-ntp-dns.sh`) on HPE NCNs. For Gigabyte or Intel NCNs this **step can be skipped**.
+5. Run the NTP DNS BMC script (`/opt/cray/ncn/set-bmc-ntp-dns.sh`) on HPE NCNs. For Gigabyte or Intel NCNs this **step can be skipped**.
 
    > Pass `-h` to see some examples and use the information below to run the script.
 
@@ -71,7 +80,7 @@ condition is hit.
       ncn# /opt/cray/ncn/set-bmc-ntp-dns.sh ilo -D "10.94.100.225,$M001_HMN_IP" -d
       ```
 
-5. Fix the kubelet and kube-proxy target down prometheus alerts.
+6. Fix the kubelet and kube-proxy target down prometheus alerts.
 
    > **NOTE**: These scripts should be run from a kubernetes node (master or worker).  ***Also note it can take several minutes for the target down alerts to clear after the scripts have been executed.***
 
@@ -85,7 +94,7 @@ condition is hit.
       ncn-m001# ./fix-kubelet-target-down-alert.sh
       ```
 
-6. Install the prometheus node-exporter onto the Utility Storage nodes
+7. Install the prometheus node-exporter onto the Utility Storage nodes
 
    1. Copy the `install-node_exporter-storage.sh` script out to the storage nodes.
       ```bash
@@ -100,3 +109,5 @@ condition is hit.
       ```bash
       ncn-s# /tmp/install-node_exporter-storage.sh
       ```
+
+8. Run the `vcs_restore.sh` script in this hotfix to restore all VCS content.
