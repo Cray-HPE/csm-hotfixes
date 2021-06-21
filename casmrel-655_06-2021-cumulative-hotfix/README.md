@@ -111,3 +111,8 @@ It is also recommended that you save the VCS password to a safe location prior t
       ```
 
 8. Run the `vcs_restore.sh` script in this hotfix to restore all VCS content.
+
+9. Disable the TPM kernel module from being loaded by the GRUB bootloader.
+    ```bash
+    ncn-m001# ./tpm-fix-install.sh
+    ```
