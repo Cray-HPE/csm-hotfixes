@@ -131,8 +131,11 @@ function createrepo() {
 # Even though compatible tools may be available on the target system, vendoring
 # them ensures sufficient versions are shipped.
 function vendor-install-deps() {
+    local include_nexus="yes"
+    local include_skopeo="yes"
+
     while [[ $# -gt 2 ]]; do
-        opt="$1"
+        local opt="$1"
         shift
         case "$opt" in
         --no-cray-nexus-setup) include_nexus="no" ;;

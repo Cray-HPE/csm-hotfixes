@@ -2,81 +2,98 @@
 
 # Copyright 2020 Hewlett Packard Enterprise Development LP
 
-set -e
+set -o errexit
 set -o pipefail
 
-: "${RELEASE:="${RELEASE_NAME:="csm"}-${RELEASE_VERSION:="0.0.0"}"}"
-
-# import release utilities
-ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
-source "${ROOTDIR}/vendor/stash.us.cray.com/scm/shastarelm/release/lib/release.sh"
-
-requires curl git perl rsync sed
-
-HOTFIX="$1"
-
-BUILDDIR=$(realpath -m "$ROOTDIR/dist/${HOTFIX}")
-HOTFIXDIR=$(realpath -m "$ROOTDIR/${HOTFIX}")
-if [[ -z "$HOTFIX" || ! -d "${HOTFIXDIR}" ]]; then
-  echo >&2 "error: First argument must be name of hotfix directory to package"
+[[ $# -gt 0 ]] || {
+  echo >&2 "usage: ${0##*/} DIR ..."
   exit 1
-fi
+}
 
-VERSION="0.0.1"
-if [[ -f "$HOTFIXDIR/.version" ]]; then
-  VERSION="$(cat "$HOTFIXDIR/.version" | tr -d '\n')"
-  echo "Using version $VERSION"
-fi
+set -o xtrace
 
-[[ -d "$BUILDDIR" ]] && rm -fr "$BUILDDIR"
-mkdir -p "$BUILDDIR"
+ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
 
-# copy local files
-rsync -aq "${HOTFIXDIR}/" "${BUILDDIR}/"
+# Import release utilities
+source "${ROOTDIR}/vendor/stash.us.cray.com/scm/shastarelm/release/lib/release.sh"
+requires cp sed
 
-# copy install scripts
-mkdir -p "${BUILDDIR}/lib"
-rsync -aq "${ROOTDIR}/vendor/stash.us.cray.com/scm/shastarelm/release/lib/" "${BUILDDIR}/lib/"
+while [[ $# -gt 0 ]]; do
 
-# sync helm charts
-if [[ -f "${BUILDDIR}/helm/index.yaml" ]]; then
-  echo "Syncing Helm ${BUILDDIR}/helm/index.yaml"
-  helm-sync "${BUILDDIR}/helm/index.yaml" "${BUILDDIR}/helm"
-fi
+  if [[ -d "$1" ]]; then
+    HOTFIXDIR="$(realpath -e --relative-to="$(pwd)" "$1")"
+  elif [[ -d "${ROOTDIR}/${1}" ]]; then
+    HOTFIXDIR="$(realpath -e --relative-to="$(pwd)" "${ROOTDIR}/${1}")"
+  else
+    echo >&2 "error: no such directory: $1"
+    exit 1
+  fi
 
-if [[ -f "${BUILDDIR}/docker/index.yaml" ]]; then
-  echo "Syncing Docker ${BUILDDIR}/docker/index.yaml"
-  skopeo-sync "${BUILDDIR}/docker/index.yaml" "${BUILDDIR}/docker"
-fi
+  shift
 
+  RELEASE_NAME="$(basename "$HOTFIXDIR")"
+  RELEASE_VERSION="0.0.1"
+  if [[ -f "$HOTFIXDIR/.version" ]]; then
+    RELEASE_VERSION="$(cat "$HOTFIXDIR/.version" | tr -d '\n')"
+  fi
+  RELEASE="${RELEASE_NAME}-${RELEASE_VERSION}"
+  echo "Building release $RELEASE"
 
-if [[ -f "${BUILDDIR}/helm/index.yaml" && -f "${BUILDDIR}/docker/index.yaml" ]]; then
-  echo "Copying cray-nexus-setup and skopeo image to distribution"
-  vendor-install-deps "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
-elif [[ -f "${BUILDDIR}/helm/index.yaml" ]]; then
-  echo "Copying cray-nexus-setup image to distribution"
-  vendor-install-deps --no-skopeo "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
-elif [[ -f "${BUILDDIR}/docker/index.yaml" ]]; then
-  echo "Copying skopeo image to distribution"
-  vendor-install-deps --no-cray-nexus-setup "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
-fi
+  BUILDDIR="$(realpath -m "$ROOTDIR/dist/$RELEASE")"
+  [[ -d "$BUILDDIR" ]] && rm -fr "$BUILDDIR"
+  mkdir -p "$BUILDDIR"
 
-if [[ -f "${BUILDDIR}/rpm/index.yaml" ]]; then
-  echo "Syncing RPM ${BUILDDIR}/rpm/index.yaml"
-  rpm-sync "${BUILDDIR}/rpm/index.yaml" "${BUILDDIR}/rpm"
-fi
+  # Copy contents to distribution
+  cp -LRpT "${HOTFIXDIR}/" "${BUILDDIR}/"
 
-# Run hotfix/release.sh
-if [[ -f "${BUILDDIR}/release.sh" ]]; then
-  echo "Running ${BUILDDIR}/release.sh"
-  (
-    cd "${BUILDDIR}"
-    chmod +x ./release.sh
-    ./release.sh
-  )
-fi
+  # Remove index files from distribution
+  rm -f "${BUILDDIR}/docker/index.yaml" "${BUILDDIR}/docker/transform.sh" "${BUILDDIR}/helm/index.yaml"
 
+  # Add version.sh
+  rm -f "${BUILDDIR}/.version"
+  mkdir -p "${BUILDDIR}/lib"
+  gen-version-sh "$RELEASE_NAME" "$RELEASE_VERSION" >"${BUILDDIR}/lib/version.sh"
+  chmod +x "${BUILDDIR}/lib/version.sh"
 
-# Package the distribution into an archive
-echo "Generating distribution tarball"
-tar -C "${BUILDDIR}/.." -cvzf "${BUILDDIR}/../$(basename "$BUILDDIR")-${VERSION}.tar.gz" "$(basename "$BUILDDIR")/" --remove-files
+  # Sync RPMs (not supported)
+  if [[ -f "${HOTFIXDIR}/rpm/index.yaml" ]]; then
+    echo "Syncing RPM index"
+    rm -f "${BUILDDIR}/rpm/index.yaml"
+    echo >&2 "Error: Not supported"
+    exit 2
+    #rpm-sync "${HOTFIXDIR}/rpm/index.yaml" "${BUILDDIR}/rpm"
+  fi
+
+  # Sync container images
+  if [[ -f "${HOTFIXDIR}/docker/index.yaml" ]]; then
+    echo "Syncing container images"
+    skopeo-sync "${HOTFIXDIR}/docker/index.yaml" "${BUILDDIR}/docker"
+    # Restructure container images as appropriate
+    [[ -x "${HOTFIXDIR}/docker/transform.sh" ]] && "${HOTFIXDIR}/docker/transform.sh" "${BUILDDIR}/docker"
+  fi
+
+  # Sync helm charts
+  if [[ -f "${HOTFIXDIR}/helm/index.yaml" ]]; then
+    echo "Syncing Helm charts"
+    helm-sync "${HOTFIXDIR}/helm/index.yaml" "${BUILDDIR}/helm"
+  fi
+
+  # Remove empty directories
+  find "$BUILDDIR" -empty -type d -delete
+
+  # Vendor install tools for container images
+  if [[ -d "${BUILDDIR}/docker" ]]; then
+    echo "Vendoring skopeo image in distribution"
+    vendor-install-deps --no-cray-nexus-setup "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
+  fi
+
+  # Vendor install tools for helm charts
+  if [[ -d "${BUILDDIR}/helm" ]]; then
+    echo "Vendoring cray-nexus-setup image in distribution"
+    vendor-install-deps --no-skopeo "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
+  fi
+
+  # Package the distribution into an archive
+  echo "Generating distribution tarball"
+  tar -C "${BUILDDIR}/.." -cvhzf "${BUILDDIR}/../$(basename "$BUILDDIR").tar.gz" "$(basename "$BUILDDIR")/" --remove-files
+done
