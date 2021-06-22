@@ -89,7 +89,7 @@ while [[ $# -gt 0 ]]; do
   find "$BUILDDIR" -empty -type d -delete
 
   # Vendor install tools for container images
-  [[ -d "${BUILDDIR}/docker" ]]; then
+  if [[ -d "${BUILDDIR}/docker" ]]; then
     echo "Vendoring skopeo image in distribution"
     vendor-install-deps --no-cray-nexus-setup "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
   fi
