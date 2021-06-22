@@ -1,0 +1,1 @@
+../../vendor/stash.us.cray.com/scm/shastarelm/release/lib/install.sh
