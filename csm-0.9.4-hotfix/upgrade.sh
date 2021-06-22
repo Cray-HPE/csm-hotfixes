@@ -30,6 +30,12 @@ yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-bos).version' 1.6.22
 # Update gitea
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==gitea).values.cray-service.persistentVolumeClaims.data-claim.name' data-claim
 
+# Update the product catalog to report CSM 0.9.4
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).values.cray-import-config.import_job.CF_IMPORT_PRODUCT_VERSION' 0.9.4
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-install).values.cray-import-kiwi-recipe-image.import_job.PRODUCT_VERSION' 0.9.4
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-install).values.cray-import-kiwi-recipe-image.import_job.name' csm-image-recipe-import-0.9.4
+
+
 # Restart gitea deployment to free previous PVC
 kubectl -n services rollout restart deployment gitea-vcs
 
