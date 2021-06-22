@@ -30,20 +30,12 @@ while [[ $# -gt 0 ]]; do
   fi
 
   shift
-  HOTFIX="$(basename "$HOTFIXDIR")"
 
-  if [[ "$HOTFIX" =~ ^v.*$ ]]; then
-    # Assume the name of the hotfix directory is the version number
-    RELEASE_NAME="csm-${HOTFIX##v}-hotfix"
-  else
-    RELEASE_NAME="$HOTFIX"
-  fi
-
+  RELEASE_NAME="$(basename "$HOTFIXDIR")"
   RELEASE_VERSION="0.0.1"
   if [[ -f "$HOTFIXDIR/.version" ]]; then
     RELEASE_VERSION="$(cat "$HOTFIXDIR/.version" | tr -d '\n')"
   fi
-
   RELEASE="${RELEASE_NAME}-${RELEASE_VERSION}"
   echo "Building release $RELEASE"
 
@@ -58,6 +50,7 @@ while [[ $# -gt 0 ]]; do
   rm -f "${BUILDDIR}/docker/index.yaml" "${BUILDDIR}/docker/transform.sh" "${BUILDDIR}/helm/index.yaml"
 
   # Add version.sh
+  rm -f "${BUILDDIR}/.version"
   mkdir -p "${BUILDDIR}/lib"
   gen-version-sh "$RELEASE_NAME" "$RELEASE_VERSION" >"${BUILDDIR}/lib/version.sh"
   chmod +x "${BUILDDIR}/lib/version.sh"
