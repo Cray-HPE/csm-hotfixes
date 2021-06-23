@@ -29,6 +29,8 @@ yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-cfs-operator).values.
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-bos).version' 1.6.22
 # Update gitea
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==gitea).values.cray-service.persistentVolumeClaims.data-claim.name' data-claim
+# Update cray-hms-rts
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-rts).version' 1.8.7
 
 # Update the product catalog to report CSM 0.9.4
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).values.cray-import-config.import_job.CF_IMPORT_PRODUCT_VERSION' 0.9.4
