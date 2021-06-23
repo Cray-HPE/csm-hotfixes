@@ -11,3 +11,5 @@ arti.dev.cray.com/csm-docker-stable-local:
     - 0.4.22
     cray-dns-unbound:
     - 0.1.18
+    hms-redfish-translation-service:
+    - 1.8.7
