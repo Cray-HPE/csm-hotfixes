@@ -45,7 +45,7 @@ pipeline {
       steps {
         sh '''
           find . -maxdepth 3 -mindepth 3 -wholename '*/lib/version.sh' | while read VERSION_SH; do
-            source "$VERSION_SH"
+            RELEASE="(cat "$VERSION_SH")"
 
             GCS_FILE="${GCS_PREFIX}/${RELEASE}.tar.gz"
 
@@ -85,7 +85,7 @@ pipeline {
           sh '''
             touch dist/slack.txt
             while read HOTFIX; do
-              source "${HOTFIX}/lib/version.sh"
+              RELEASE="(cat "$VERSION_SH")"
 
               DIST_FILE="dist/${RELEASE}.tar.gz"
               GCS_FILE="${GCS_PREFIX}/${RELEASE}.tar.gz"
