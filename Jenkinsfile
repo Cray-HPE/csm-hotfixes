@@ -44,7 +44,7 @@ pipeline {
     stage('Find hotfixes to build') {
       steps {
         sh '''
-          find . -maxdepth 1 -type d ! -name '.*' ! -name vendor ! -name lib ! -name hack | sed 's,^\\./,,' | while read HOTFIX; do
+          for HOTFIX in $(find . -maxdepth 1 -type d ! -name '.*' ! -name vendor ! -name lib ! -name hack | sed 's,^\\./,,') ; do
             [[ -f "${HOTFIX}/lib/version.sh" ]] || continue
             source "${HOTFIX}/lib/version.sh"
 
