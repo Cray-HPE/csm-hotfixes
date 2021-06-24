@@ -44,9 +44,8 @@ pipeline {
     stage('Find hotfixes to build') {
       steps {
         sh '''
-          for HOTFIX in $(find . -maxdepth 1 -type d ! -name '.*' ! -name vendor ! -name lib ! -name hack | sed 's,^\\./,,') ; do
-            [[ -f "${HOTFIX}/lib/version.sh" ]] || continue
-            source "${HOTFIX}/lib/version.sh"
+          find . -maxdepth 3 -mindepth 3 -wholename '*/lib/version.sh' | while read VERSION_SH; do
+            source "$VERSION_SH"
 
             GCS_FILE="${GCS_PREFIX}/${RELEASE}.tar.gz"
 
@@ -56,7 +55,7 @@ pipeline {
               echo "https://storage.googleapis.com/csm-release-public/hotfix/${RELEASE}.tar.gz"
             else
               echo "Distribution not found for ${RELEASE}. Building"
-              echo ${HOTFIX} >> dist/build.txt
+              echo ${VERSION_SH%%/lib/version.sh} >> dist/build.txt
             fi
           done
 
@@ -84,7 +83,7 @@ pipeline {
       steps {
         script {
           sh '''
-            touch dist/built.txt
+            touch dist/slack.txt
             while read HOTFIX; do
               source "${HOTFIX}/lib/version.sh"
 
