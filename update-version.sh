@@ -15,7 +15,7 @@ fi
 
 source "$script"
 
-ROOTDIR="$(dirname "${BASH_SOURCE[0]}")/.."
+ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOTDIR}/vendor/stash.us.cray.com/scm/shastarelm/release/lib/release.sh"
 
 gen-version-sh "$RELEASE_NAME" "$version" > "$script"
