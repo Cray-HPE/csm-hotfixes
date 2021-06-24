@@ -19,8 +19,8 @@ kubectl -n loftsman get cm loftsman-core-services -o jsonpath='{.data.manifest\.
 # Update cray-dhcp-kea
 yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dhcp-kea).version' 0.4.22
 # Update cray-dns-unbound
-yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).version' 0.1.18
-yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.global.appVersion' 0.1.18
+yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).version' 0.1.19
+yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.global.appVersion' 0.1.19
 
 # Patch sysmgmt manifest
 kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/sysmgmt.yaml"
