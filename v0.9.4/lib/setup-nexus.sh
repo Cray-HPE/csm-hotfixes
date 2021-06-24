@@ -5,7 +5,6 @@
 set -exo pipefail
 
 ROOTDIR="$(dirname "${BASH_SOURCE[0]}")/.."
-source "${ROOTDIR}/lib/version.sh"
 source "${ROOTDIR}/lib/install.sh"
 
 load-install-deps

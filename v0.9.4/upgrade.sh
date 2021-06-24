@@ -6,6 +6,8 @@ set -o errexit
 set -o pipefail
 set -o xtrace
 
+ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
+source "${ROOTDIR}/lib/version.sh"
 
 # Create scratch space
 workdir="$(mktemp -d)"
@@ -33,9 +35,9 @@ yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==gitea).values.cray-service
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-rts).version' 1.8.7
 
 # Update the product catalog to report CSM 0.9.4
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).values.cray-import-config.import_job.CF_IMPORT_PRODUCT_VERSION' 0.9.4
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-install).values.cray-import-kiwi-recipe-image.import_job.PRODUCT_VERSION' 0.9.4
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-install).values.cray-import-kiwi-recipe-image.import_job.name' csm-image-recipe-import-0.9.4
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).values.cray-import-config.import_job.CF_IMPORT_PRODUCT_VERSION' "$RELEASE_VERSION"
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-install).values.cray-import-kiwi-recipe-image.import_job.PRODUCT_VERSION' "$RELEASE_VERSION"
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-install).values.cray-import-kiwi-recipe-image.import_job.name' "csm-image-recipe-import-${RELEASE_VERSION}"
 
 
 # Restart gitea deployment to free previous PVC
