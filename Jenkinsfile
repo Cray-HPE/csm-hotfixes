@@ -45,15 +45,18 @@ pipeline {
       steps {
         sh '''
           for HOTFIX in $(find . -type d -name '*-*' -maxdepth 1 | sed 's|^\\./||') ; do
-            VERSION="$([[ -f ${HOTFIX}/.version ]] && (cat ${HOTFIX}/.version |  tr -d '\n') || echo "0.0.1")"
-            GCS_FILE="${GCS_PREFIX}/${HOTFIX}-${VERSION}.tar.gz"
+
+            [[ -f "${HOTFIX}/lib/version.sh" ]] || continue
+            source "${HOTFIX}/lib/version.sh"
+
+            GCS_FILE="${GCS_PREFIX}/${RELEASE}.tar.gz"
 
             echo "Looking for existing distribution ${GCS_FILE}"
             if gsutil -q stat ${GCS_FILE}; then
-              echo "Distribution already found for ${HOTFIX}. Not rebuilding"
-              echo "https://storage.googleapis.com/csm-release-public/hotfix/${HOTFIX}-${VERSION}.tar.gz"
+              echo "Distribution already found for ${RELEASE}. Not rebuilding"
+              echo "https://storage.googleapis.com/csm-release-public/hotfix/${RELEASE}.tar.gz"
             else
-              echo "Distribution not found for ${HOTFIX}. Building"
+              echo "Distribution not found for ${RELEASE}. Building"
               echo ${HOTFIX} >> dist/build.txt
             fi
           done
@@ -84,25 +87,26 @@ pipeline {
           sh '''
             touch dist/built.txt
             while read HOTFIX; do
-              VERSION="$([[ -f ${HOTFIX}/.version ]] && (cat ${HOTFIX}/.version |  tr -d '\n') || echo "0.0.1")"
-              DIST_FILE="dist/${HOTFIX}-${VERSION}.tar.gz"
-              GCS_FILE="${GCS_PREFIX}/${HOTFIX}-${VERSION}.tar.gz"
+              source "${HOTFIX}/lib/version.sh"
+
+              DIST_FILE="dist/${RELEASE}.tar.gz"
+              GCS_FILE="${GCS_PREFIX}/${RELEASE}.tar.gz"
 
               echo "Uploading ${DIST_FILE} to ${GCS_FILE}"
               gsutil cp ${DIST_FILE} ${GCS_FILE}
 
-              URL="https://storage.googleapis.com/csm-release-public/hotfix/${HOTFIX}-${VERSION}.tar.gz"
+              URL="https://storage.googleapis.com/csm-release-public/hotfix/${RELEASE}.tar.gz"
               echo "Hotfix available at"
               echo "${URL}"
 
-              echo "${HOTFIX}-${VERSION}" >> dist/built.txt
+              echo "Hotfix ${RELEASE} uploaded to ${URL}" >> dist/slack.txt
             done < dist/build.txt
           '''
 
-          def hotfixes = readFile("dist/built.txt").split("\n")
-          for(String hotfix in hotfixes) {
-            if(params.SLACK_CHANNEL != "" && hotfix != "") {
-              slackSend(channel: params.SLACK_CHANNEL, color: "good", message: "Hotfix ${hotfix} Uploaded to https://storage.googleapis.com/csm-release-public/hotfix/${hotfix}.tar.gz")
+          def msgs = readFile("dist/slack.txt").split("\n")
+          for(String msg in msgs) {
+            if(params.SLACK_CHANNEL != "" && msg != "") {
+              slackSend(channel: params.SLACK_CHANNEL, color: "good", message: msg)
             }
           }
         }

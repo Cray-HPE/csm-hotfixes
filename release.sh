@@ -30,13 +30,14 @@ while [[ $# -gt 0 ]]; do
   fi
 
   shift
+  HOTFIX="$(basename "$HOTFIXDIR")"
 
-  RELEASE_NAME="$(basename "$HOTFIXDIR")"
-  RELEASE_VERSION="0.0.1"
-  if [[ -f "$HOTFIXDIR/.version" ]]; then
-    RELEASE_VERSION="$(cat "$HOTFIXDIR/.version" | tr -d '\n')"
+  if [[ ! -x "${HOTFIXDIR}/lib/version.sh" ]]; then
+    echo >&2 "error: missing version script or is not executable: ${HOTFIXDIR}/lib/version.sh"
+    exit 2
   fi
-  RELEASE="${RELEASE_NAME}-${RELEASE_VERSION}"
+
+  source "${HOTFIXDIR}/lib/version.sh"
   echo "Building release $RELEASE"
 
   BUILDDIR="$(realpath -m "$ROOTDIR/dist/$RELEASE")"
@@ -46,14 +47,11 @@ while [[ $# -gt 0 ]]; do
   # Copy contents to distribution
   cp -LRpT "${HOTFIXDIR}/" "${BUILDDIR}/"
 
+  # Make sure the old .version file is gone!
+  rm -f "${BUILDDIR}/.version"
+
   # Remove index files from distribution
   rm -f "${BUILDDIR}/docker/index.yaml" "${BUILDDIR}/docker/transform.sh" "${BUILDDIR}/helm/index.yaml"
-
-  # Add version.sh
-  rm -f "${BUILDDIR}/.version"
-  mkdir -p "${BUILDDIR}/lib"
-  gen-version-sh "$RELEASE_NAME" "$RELEASE_VERSION" >"${BUILDDIR}/lib/version.sh"
-  chmod +x "${BUILDDIR}/lib/version.sh"
 
   # Sync RPMs (not supported)
   if [[ -f "${HOTFIXDIR}/rpm/index.yaml" ]]; then
