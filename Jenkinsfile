@@ -44,7 +44,7 @@ pipeline {
     stage('Find hotfixes to build') {
       steps {
         sh '''
-          find . -maxdepth 3 -mindepth 3 -wholename '*/lib/version.sh' | while read VERSION_SH; do
+          find . -maxdepth 3 -mindepth 3 -wholename '*/lib/version.sh' ! -wholename './.*' ! -wholename './vendor/*' | while read VERSION_SH; do
             RELEASE="$("$VERSION_SH")"
 
             GCS_FILE="${GCS_PREFIX}/${RELEASE}.tar.gz"
