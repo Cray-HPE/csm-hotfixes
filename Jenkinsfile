@@ -55,7 +55,7 @@ pipeline {
               echo "https://storage.googleapis.com/csm-release-public/hotfix/${RELEASE}.tar.gz"
             else
               echo "Distribution not found for ${RELEASE}. Building"
-              echo ${VERSION_SH%%/lib/version.sh} >> dist/build.txt
+              echo "${VERSION_SH}" >> dist/build.txt
             fi
           done
 
@@ -68,9 +68,10 @@ pipeline {
     stage('Build Hotfixes') {
       steps {
         sh '''
-          while read HOTFIX; do
+          while read VERSION_SH; do
+            HOTFIX="${VERSION_SH%%/lib/version.sh}"
             echo "Building ${HOTFIX}"
-            ./release.sh ${HOTFIX}
+            ./release.sh "$HOTFIX"
           done < dist/build.txt
         '''
       }
@@ -84,7 +85,7 @@ pipeline {
         script {
           sh '''
             touch dist/slack.txt
-            while read HOTFIX; do
+            while read VERSION_SH; do
               RELEASE="$("$VERSION_SH")"
 
               DIST_FILE="dist/${RELEASE}.tar.gz"
