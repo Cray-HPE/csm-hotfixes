@@ -2,7 +2,7 @@
 
 # Copyright 2020 Hewlett Packard Enterprise Development LP
 
-: "${RELEASE:="${RELEASE_NAME:="csm-hotfix"}-${RELEASE_VERSION:="0.9.4-beta.5"}"}"
+: "${RELEASE:="${RELEASE_NAME:="csm-hotfix"}-${RELEASE_VERSION:="0.9.4-rc.1"}"}"
 
 # return if sourced
 return 0 2>/dev/null
