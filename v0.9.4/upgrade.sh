@@ -53,8 +53,25 @@ function deploy() {
     done
 }
 
-# Redeploy patched manifests
-deploy "${workdir}/core-services.yaml" "${workdir}/sysmgmt.yaml"
+# Save previous Unbound IP
+pre_upgrade_unbound_ip="$(kubectl get -n services service cray-dns-unbound-udp-nmn -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
+
+# Redeploy core-services
+deploy "${workdir}/core-services.yaml"
+
+# Wait for Unbound to come up
+"${ROOTDIR}/lib/wait-for-unbound.sh"
+
+# Verify Unbound settings
+unbound_ip="$(kubectl get -n services service cray-dns-unbound-udp-nmn -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
+if [[ "$pre_upgrade_unbound_ip" != "$unbound_ip" ]]; then
+    echo >&2 "WARNING: Unbound IP has changed: $unbound_ip"
+    echo >&2 "WARNING: Need to update nameserver settings on NCNs"
+    # TODO pdsh command to update nameserver settings
+fi
+
+# Redeploy sysmgmt
+deploy "${workdir}/sysmgmt.yaml"
 
 
 set +x
