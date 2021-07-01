@@ -22,3 +22,4 @@ gen-version-sh "$RELEASE_NAME" "$version" > "$script"
 chmod +x "$script"
 
 git add "$script"
+git --no-pager diff --staged
