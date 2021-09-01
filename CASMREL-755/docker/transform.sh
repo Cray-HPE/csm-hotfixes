@@ -32,6 +32,7 @@ DISTDIR=$1
 # Transform images to 1.4 dtr.dev.cray.com structure
 (
     cd "${DISTDIR}"
-    mkdir dtr.dev.cray.com
+    mkdir artifactory.algol60.net
     mv arti.dev.cray.com/csm-docker-stable-local/ dtr.dev.cray.com/cray/
+    mv artifactory.algol60.net/csm-docker/stable/ artifactory.algol60.net/
 )
