@@ -16,19 +16,9 @@ trap "rm -fr '${workdir}'" EXIT
 
 # Patch core-services manifest
 kubectl -n loftsman get cm loftsman-core-services -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/core-services.yaml"
-# Update cray-dhcp-kea
-yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dhcp-kea).version' 0.4.22
-# Update cray-dns-unbound
-yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).version' 0.1.19
-yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.global.appVersion' 0.1.19
 
 # Patch sysmgmt manifest
 kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/sysmgmt.yaml"
-# Update cray-cfs-operator
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-cfs-operator).values.cray-service.containers.cray-cfs-operator.image.tag' 1.10.22
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-cfs-operator).values.cray-service.containers.cray-cfs-operator.image.pullPolicy' IfNotPresent
-# Update gitea
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==gitea).values.cray-service.persistentVolumeClaims.data-claim.name' data-claim
 # Update cray-hms-hmnfd
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-hmnfd).version' 1.7.5
 

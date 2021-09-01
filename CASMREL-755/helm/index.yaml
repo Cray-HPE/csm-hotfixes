@@ -1,10 +1,4 @@
-https://arti.dev.cray.com/artifactory/csm-helm-stable-local/:
+https://artifactory.algol60.net/artifactory/csm-helm-charts/stable:
   charts:
-    cray-bos:
-    - 1.6.22
-    cray-dhcp-kea:
-    - 0.4.22
-    cray-dns-unbound:
-    - 0.1.19
     cray-hms-hmnfd:
     - 1.7.5
