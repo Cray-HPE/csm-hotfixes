@@ -1,4 +1,4 @@
-artifactory.algol.60.net/csm-docker/stable:
+artifactory.algol60.net/csm-docker/stable:
   tls-verify: true
   images:
     cray-hmnfd:
