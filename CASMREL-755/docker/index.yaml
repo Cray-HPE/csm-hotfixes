@@ -8,6 +8,8 @@ arti.dev.cray.com/third-party-docker-stable-local:
   images:
     docker.io/jimmidyson/configmap-reload:
     - v0.3.0
+    quay.io/prometheus/alertmanager:
+    - v0.21.0
     quay.io/coreos/kube-state-metrics:
     - v1.9.7
     coreos/prometheus-operator:
