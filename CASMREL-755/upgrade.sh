@@ -43,6 +43,16 @@ for master in $masters; do
 done
 unset IFS
 
+# Ensuring cloud-init is healthy
+set +e
+cloud-init query -a > /dev/null 2>&1
+rc=$?
+if [[ "$rc" -ne 0 ]]; then
+  # Attempt to repair cached data
+  cloud-init init > /dev/null 2>&1
+fi
+set -o errexit
+
 # Distribute and configure node-exporter to storage nodes
 num_storage_nodes=$(craysys metadata get num-storage-nodes)
 for node_num in $(seq $num_storage_nodes); do

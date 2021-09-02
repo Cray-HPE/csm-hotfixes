@@ -1,11 +1,15 @@
-# CSM 0.9.4 Hotfix Distribution
+# CASMREL-755
 
-Download the latest docs-csm RPM and follow the procedures for upgrading to CSM
-0.9.4 which will guide you through running `lib/setup-nexus.sh` to update Nexus
-repositories and `upgrade.sh` to upgrade system management services.
+This procedure covers applying the hotfix for the following:
 
-If this machine does not have direct internet access these RPMs will need to be externally downloaded and then copied to be installed.
+* Update cray-sysmgmt-health helm chart to address multiple alerts
+* Install/Update node_exporter on storage nodes
+* Update cray-hms-hmnfd helm chart
 
-ncn-m001# rpm -Uvh https://storage.googleapis.com/csm-release-public/shasta-1.4/docs-csm-install/docs-csm-install-latest.noarch.rpm
+## Execute upgrade.sh script
 
-ncn-m001# rpm -Uvh https://storage.googleapis.com/csm-release-public/shasta-1.4/csm-install-workarounds/csm-install-workarounds-latest.noarch.rpm
+This hotfix is applied by applying the upgrade script as follows:
+
+```bash
+ncn-m001# ./upgrade.sh
+```
