@@ -3,3 +3,18 @@ artifactory.algol60.net/csm-docker/stable:
   images:
     cray-hmnfd:
     - 1.7.5
+arti.dev.cray.com/third-party-docker-stable-local:
+  tls-verify: true
+  images:
+    docker.io/jimmidyson/configmap-reload:
+    - v0.3.0
+    quay.io/coreos/kube-state-metrics:
+    - v1.9.7
+    coreos/prometheus-operator:
+    - v0.38.1
+quay.io:
+  images:
+    skopeo/stable:
+    - latest
+    prometheus/node-exporter:
+    - v1.2.2

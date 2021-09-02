@@ -2,3 +2,5 @@ https://artifactory.algol60.net/artifactory/csm-helm-charts/stable:
   charts:
     cray-hms-hmnfd:
     - 1.7.5
+    cray-sysmgmt-health:
+    - 0.12.6

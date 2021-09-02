@@ -29,10 +29,14 @@ yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-install).values.cray-import-kiwi-recipe-image.import_job.name' "csm-image-recipe-import-${RELEASE_VERSION}"
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-install).values.cray-import-kiwi-recipe-image.catalog.image.tag' 0.0.9
 
-
-# Restart gitea deployment to free previous PVC
-kubectl -n services rollout restart deployment gitea-vcs
-
+# Distribute and run script to patch kube-system manifests
+masters=$(kubectl get node --selector='node-role.kubernetes.io/master' -o name | sed -e 's,^node/,,' | paste -sd,)
+export PDSH_SSH_ARGS_APPEND="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+export IFS=","
+for master in $masters; do
+  scp ${ROOTDIR}/patch-manifests.sh $master:/tmp
+done
+pdsh -w "$masters" "/tmp/patch-manifests.sh"
 
 function deploy() {
     while [[ $# -gt 0 ]]; do
@@ -40,23 +44,6 @@ function deploy() {
         shift
     done
 }
-
-# Save previous Unbound IP
-pre_upgrade_unbound_ip="$(kubectl get -n services service cray-dns-unbound-udp-nmn -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
-
-# Redeploy core-services
-deploy "${workdir}/core-services.yaml"
-
-# Wait for Unbound to come up
-"${ROOTDIR}/lib/wait-for-unbound.sh"
-
-# Verify Unbound settings
-unbound_ip="$(kubectl get -n services service cray-dns-unbound-udp-nmn -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
-if [[ "$pre_upgrade_unbound_ip" != "$unbound_ip" ]]; then
-    echo >&2 "WARNING: Unbound IP has changed: $unbound_ip"
-    echo >&2 "WARNING: Need to update nameserver settings on NCNs"
-    # TODO pdsh command to update nameserver settings
-fi
 
 # Redeploy sysmgmt
 deploy "${workdir}/sysmgmt.yaml"
