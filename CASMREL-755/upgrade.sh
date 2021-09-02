@@ -35,6 +35,7 @@ masters=$(kubectl get node --selector='node-role.kubernetes.io/master' -o name |
 export PDSH_SSH_ARGS_APPEND="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 export IFS=","
 for master in $masters; do
+  ssh-keyscan -H "$master" 2> /dev/null >> ~/.ssh/known_hosts
   scp ${ROOTDIR}/patch-manifests.sh $master:/tmp
   pdsh -w $master "/tmp/patch-manifests.sh"
   # Give K8S a chance to spin up pods for this node
@@ -45,6 +46,7 @@ unset IFS
 # Distribute and configure node-exporter to storage nodes
 num_storage_nodes=$(craysys metadata get num-storage-nodes)
 for node_num in $(seq $num_storage_nodes); do
+  ssh-keyscan -H "$storage_node" 2> /dev/null >> ~/.ssh/known_hosts
   storage_node=$(printf "ncn-s%03d" "$node_num")
   scp ${ROOTDIR}/files/node_exporter $storage_node:/usr/bin
   scp ${ROOTDIR}/install-node_exporter-storage.sh $storage_node:/tmp
