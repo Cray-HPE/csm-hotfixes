@@ -6,7 +6,7 @@ This procedure covers applying the hotfix for the following:
 * Install/Update node_exporter on storage nodes
 * Update cray-hms-hmnfd helm chart
 
-## Execute upgrade.sh script
+## Execute the install-hotfix.sh script
 
 This hotfix is applied by applying the following script:
 
