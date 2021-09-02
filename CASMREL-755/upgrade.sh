@@ -46,8 +46,12 @@ unset IFS
 # Distribute and configure node-exporter to storage nodes
 num_storage_nodes=$(craysys metadata get num-storage-nodes)
 for node_num in $(seq $num_storage_nodes); do
-  ssh-keyscan -H "$storage_node" 2> /dev/null >> ~/.ssh/known_hosts
   storage_node=$(printf "ncn-s%03d" "$node_num")
+  ssh-keyscan -H "$storage_node" 2> /dev/null >> ~/.ssh/known_hosts
+  status=$(pdsh -N -w $storage_node "systemctl is-active node_exporter")
+  if [ "$status" == "active" ]; then
+    pdsh -w $storage_node "systemctl stop node_exporter"
+  fi
   scp ${ROOTDIR}/files/node_exporter $storage_node:/usr/bin
   scp ${ROOTDIR}/install-node_exporter-storage.sh $storage_node:/tmp
   pdsh -w $storage_node "/tmp/install-node_exporter-storage.sh"
