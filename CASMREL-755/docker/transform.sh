@@ -34,6 +34,6 @@ DISTDIR=$1
     cd "${DISTDIR}"
     mkdir dtr.dev.cray.com
     mv -v artifactory.algol60.net/csm-docker/stable/ dtr.dev.cray.com/cray/
-    mv -v quay.io/prometheus/* dtr.dev.cray.com/prometheus/
+    mv -v quay.io/ dtr.dev.cray.com/
     mv -v arti.dev.cray.com/third-party-docker-stable-local/* dtr.dev.cray.com/
 )
