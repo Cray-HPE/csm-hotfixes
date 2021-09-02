@@ -36,7 +36,7 @@ export PDSH_SSH_ARGS_APPEND="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/
 export IFS=","
 for master in $masters; do
   ssh-keyscan -H "$master" 2> /dev/null >> ~/.ssh/known_hosts
-  scp ${ROOTDIR}/patch-manifests.sh $master:/tmp
+  scp ${ROOTDIR}/scripts/patch-manifests.sh $master:/tmp
   pdsh -w $master "/tmp/patch-manifests.sh"
   # Give K8S a chance to spin up pods for this node
   sleep 10
@@ -63,7 +63,7 @@ for node_num in $(seq $num_storage_nodes); do
     pdsh -w $storage_node "systemctl stop node_exporter"
   fi
   scp ${ROOTDIR}/files/node_exporter $storage_node:/usr/bin
-  scp ${ROOTDIR}/install-node_exporter-storage.sh $storage_node:/tmp
+  scp ${ROOTDIR}/scripts/install-node_exporter-storage.sh $storage_node:/tmp
   pdsh -w $storage_node "/tmp/install-node_exporter-storage.sh"
 done
 

@@ -8,8 +8,8 @@ This procedure covers applying the hotfix for the following:
 
 ## Execute upgrade.sh script
 
-This hotfix is applied by applying the upgrade script as follows:
+This hotfix is applied by applying the following script:
 
 ```bash
-ncn-m001# ./upgrade.sh
+ncn-m001# ./install-hotfix.sh
 ```
