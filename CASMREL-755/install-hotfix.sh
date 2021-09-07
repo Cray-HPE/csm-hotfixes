@@ -66,16 +66,19 @@ for node_num in $(seq $num_storage_nodes); do
   if [ "$status" == "active" ]; then
     pdsh -w $storage_node "systemctl stop node_exporter"
   fi
-  pdsh -w $storage_node "zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-655/cray-node-exporter-1.2.2-1.x86_64.rpm"
+  pdsh -w $storage_node "zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-755/cray-node-exporter-1.2.2-1.x86_64.rpm"
 done
 
 #
-# TODO: Now update bss metadata runcmd in order to make hotfix
-#       survive node reuilds:
+#  Updating bss metadata runcmd in order to make hotfix
+#  survive node reuilds:
+#
+# Below is occuring in the update_bss_(masters/storage) functions.
+# These comments will be removed after testing.
 #
 # Storage nodes:
 #
-#  'zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-655/cray-node-exporter-1.2.2-1.x86_64.rpm'
+#  'zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-755/cray-node-exporter-1.2.2-1.x86_64.rpm'
 #
 # Master nodes:
 #
