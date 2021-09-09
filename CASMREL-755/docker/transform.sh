@@ -35,6 +35,11 @@ DISTDIR=$1
     mkdir dtr.dev.cray.com
     mv -v artifactory.algol60.net/csm-docker/stable/ dtr.dev.cray.com/cray/
     mv -v arti.dev.cray.com/third-party-docker-stable-local/* dtr.dev.cray.com/
+    mv -v dtr.dev.cray.com/docker.io/jimmidyson dtr.dev.cray.com
+    mv -v dtr.dev.cray.com/quay.io/coreos/* dtr.dev.cray.com/coreos
+    mv -v dtr.dev.cray.com/quay.io/prometheus dtr.dev.cray.com/prometheus
     cp -r -v quay.io/* dtr.dev.cray.com/quay.io
+    mv -v dtr.dev.cray.com/quay.io/prometheus/node-exporter* dtr.dev.cray.com/prometheus
     rm -rfv quay.io
+    rm -rfv dtr.dev.cray.com/docker.io
 )

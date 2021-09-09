@@ -8,6 +8,7 @@ set -o xtrace
 
 ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOTDIR}/lib/version.sh"
+source "${ROOTDIR}/scripts/update-bss-metadata.sh"
 
 # Create scratch space
 workdir="$(mktemp -d)"
@@ -23,12 +24,15 @@ kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}'
 # Update cray-hms-hmnfd
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-hmnfd).version' 1.7.5
 
-# Update the product catalog to report CSM 0.9.5
+# Update the product catalog to report CSM 0.9.6
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).values.cray-import-config.import_job.CF_IMPORT_PRODUCT_VERSION' "$RELEASE_VERSION"
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).values.cray-import-config.catalog.image.tag' 0.0.9
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-install).values.cray-import-kiwi-recipe-image.import_job.PRODUCT_VERSION' "$RELEASE_VERSION"
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-install).values.cray-import-kiwi-recipe-image.import_job.name' "csm-image-recipe-import-${RELEASE_VERSION}"
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-install).values.cray-import-kiwi-recipe-image.catalog.image.tag' 0.0.9
+
+# Load artifacts into nexus
+${ROOTDIR}/lib/setup-nexus.sh
 
 # Distribute and run script to patch kube-system manifests
 masters=$(kubectl get node --selector='node-role.kubernetes.io/master' -o name | sed -e 's,^node/,,' | paste -sd,)
@@ -62,10 +66,31 @@ for node_num in $(seq $num_storage_nodes); do
   if [ "$status" == "active" ]; then
     pdsh -w $storage_node "systemctl stop node_exporter"
   fi
-  scp ${ROOTDIR}/files/node_exporter $storage_node:/usr/bin
-  scp ${ROOTDIR}/scripts/install-node_exporter-storage.sh $storage_node:/tmp
-  pdsh -w $storage_node "/tmp/install-node_exporter-storage.sh"
+  pdsh -w $storage_node "zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-755/cray-node-exporter-1.2.2-1.x86_64.rpm"
 done
+
+#
+#  Updating bss metadata runcmd in order to make hotfix
+#  survive node reuilds:
+#
+# Below is occuring in the update_bss_(masters/storage) functions.
+# These comments will be removed after testing.
+#
+# Storage nodes:
+#
+#  'zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-755/cray-node-exporter-1.2.2-1.x86_64.rpm'
+#
+# Master nodes:
+#
+#  sed -i 's/--bind-address=127.0.0.1/--bind-address=0.0.0.0/' /etc/kubernetes/manifests/kube-controller-manager.yaml
+#  sed -i '/--port=0/d' /etc/kubernetes/manifests/kube-scheduler.yaml
+#  sed -i 's/--bind-address=127.0.0.1/--bind-address=0.0.0.0/' /etc/kubernetes/manifests/kube-scheduler.yaml
+#
+
+export TOKEN=$(curl -s -k -S -d grant_type=client_credentials -d client_id=admin-client -d client_secret=`kubectl get secrets admin-client-auth -o jsonpath='{.data.client-secret}' | base64 -d` https://api-gw-service-nmn.local/keycloak/realms/shasta/protocol/openid-connect/token | jq -r '.access_token')
+
+update_bss_masters
+update_bss_storage
 
 function deploy() {
     while [[ $# -gt 0 ]]; do

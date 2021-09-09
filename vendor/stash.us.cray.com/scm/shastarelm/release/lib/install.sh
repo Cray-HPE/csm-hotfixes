@@ -133,3 +133,16 @@ function skopeo-sync() {
             sync --scoped --src dir --dest docker --dest-tls-verify=false /image "${NEXUS_REGISTRY}" || return
     done
 }
+
+function nexus-repositories-create() {
+    local src="$1"
+    local repofile="$2"
+
+    [[ -d "$src" ]] || return 0
+
+    podman run --rm --network host \
+        -v "$(realpath "$src"):/tmp:ro" \
+        -e "NEXUS_URL=${NEXUS_URL}" \
+        "$CRAY_NEXUS_SETUP_IMAGE" \
+        "nexus-repositories-create" "$repofile"
+}
