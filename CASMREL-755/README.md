@@ -26,7 +26,7 @@ ncn-m001# ./install-hotfix.sh
 
 ## Validation
 
-Node exporter:
+### Node exporter:
 
 1. Confirm node-exporter is running on each storage node
 
@@ -109,3 +109,57 @@ Node exporter:
      ]
    }
    ```
+
+### HMNFD:
+
+Once hot fix is installed the missing timestamp fix can be validated by taking the following steps:
+
+1. Find an instance of a cluster-kafka pod:
+
+```
+   kubectl -n sma get pods | grep kafka
+   cluster-kafka-0               2/2     Running     1          30d
+   cluster-kafka-1               2/2     Running     1          26d
+   cluster-kafka-2               2/2     Running     0          73d
+```
+
+2. Exec into one of those pods:
+
+```
+   kubectl -n sma exec -it <pod_id> /bin/bash
+```
+
+3. cd to the 'bin' directory in the kafka pod.
+
+4. Execute the following command in the kafka pod to run a kafka consumer app:
+
+```
+   ./kafka-console-consumer.sh --bootstrap-server=localhost:9092 --topic=cray-hmsstatechange-notifications
+```
+
+5. Find a compute node that is booted on the system:
+
+```
+   sat status | grep Compute | grep Ready
+   ...
+   | x1003c7s7b1n1  | Node | 2023     | Ready   | OK   | True    | X86  | Mountain | Compute     | Sling    |
+```
+
+NOTE: All examples below will use the node seen in the above example.
+
+6. Send an SCN to HMNFD for that node indicating that it is in the Ready state.  Note that this won't affect anything since the node is already Ready.
+
+```
+   TOKEN=`curl -k -s -S -d grant_type=client_credentials -d client_id=admin-client -d client_secret=\`kubectl get secrets admin-client-auth -o jsonpath='{.data.client-secret}' | base64 -d\` https://api-gw-service-nmn.local/keycloak/realms/shasta/protocol/openid-connect/token | jq -r '.access_token'`
+
+   curl -s -k -H "Authorization: Bearer ${TOKEN}" -X POST -d '{"Components":[x1003c7s7b1n1],"State":"Ready"}' https://api_gw_service.local/apis/hmnfd/hmi/v1/scn
+```
+
+7. In the kafka-console-consumer.sh window there should be an SCN sent by HMNFD, which should include a Timestamp field:
+
+```
+   {"Components":["x1003c7s7b1n1"],"Flag":"OK","State":"Ready","Timestamp":"2021-09-13T13:00:00"}
+```
+
+
+
