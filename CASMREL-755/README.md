@@ -105,7 +105,7 @@ ncn-m001# ./install-hotfix.sh
        "/srv/cray/scripts/metal/set-bmc-bbs.sh",
        "/srv/cray/scripts/metal/disable-cloud-init.sh",
        "/srv/cray/scripts/common/update_ca_certs.py",
-       "zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-755/cray-node-exporter-1.2.2-1.x86_64.rpm"
+       "zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-755/cray-node-exporter-1.2.2.1-1.x86_64.rpm"
      ]
    }
    ```
@@ -161,5 +161,12 @@ NOTE: All examples below will use the node seen in the above example.
    {"Components":["x1003c7s7b1n1"],"Flag":"OK","State":"Ready","Timestamp":"2021-09-13T13:00:00"}
 ```
 
+## Notes:
 
+1. After this hotfix is installed, the changes related to installing the node-exporter on the storage node will persist if a storage node is rebuilt (due to hardware failure or otherwise).  However, after rebuilding a storage node, the `CephMonVersionMismatch` may start alerting in prometheus.  If so, restarting the active Ceph mgr process may be necessary in order to clear the alert.  The following command will restart the active mgr process, and can be executed on any storage node:
 
+   ```
+   ncn-s00(1/2/3): ceph mgr fail $(ceph mgr dump | jq -r .active_name)
+   ```
+
+   The `CephMonVersionMismatch` prometheus alert should clear within ten minutes after restarting active Ceph mgr process.

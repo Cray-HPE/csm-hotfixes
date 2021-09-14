@@ -24,7 +24,7 @@ kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}'
 # Update cray-hms-hmnfd
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-hmnfd).version' 1.7.5
 
-# Update the product catalog to report CSM 0.9.6
+# Update the product catalog to report CSM 0.9.9
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).values.cray-import-config.import_job.CF_IMPORT_PRODUCT_VERSION' "$RELEASE_VERSION"
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).values.cray-import-config.catalog.image.tag' 0.0.9
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-install).values.cray-import-kiwi-recipe-image.import_job.PRODUCT_VERSION' "$RELEASE_VERSION"
@@ -66,7 +66,7 @@ for node_num in $(seq $num_storage_nodes); do
   if [ "$status" == "active" ]; then
     pdsh -w $storage_node "systemctl stop node_exporter"
   fi
-  pdsh -w $storage_node "zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-755/cray-node-exporter-1.2.2-1.x86_64.rpm"
+  pdsh -w $storage_node "zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-755/cray-node-exporter-1.2.2.1-1.x86_64.rpm"
 done
 
 #
@@ -78,7 +78,7 @@ done
 #
 # Storage nodes:
 #
-#  'zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-755/cray-node-exporter-1.2.2-1.x86_64.rpm'
+#  'zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-755/cray-node-exporter-1.2.2.1-1.x86_64.rpm'
 #
 # Master nodes:
 #

@@ -21,8 +21,8 @@ function update_bss_storage() {
     storage_node=$(printf "ncn-s%03d" "$node_num")
     xName=$(ssh -q -o StrictHostKeyChecking=no $storage_node 'cat /etc/cray/xname')
     cray bss bootparameters list --name $xName --format=json | jq '.[]' > /tmp/$xName
-    if ! grep -q "cray-node-exporter-1.2.2-1.x86_64.rpm" /tmp/$xName; then
-      sed -i '/"\/srv\/cray\/scripts\/common\/update_ca_certs.py"/a \        "zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-755/cray-node-exporter-1.2.2-1.x86_64.rpm"' /tmp/$xName
+    if ! grep -q "cray-node-exporter-1.2.2.1-1.x86_64.rpm" /tmp/$xName; then
+      sed -i '/"\/srv\/cray\/scripts\/common\/update_ca_certs.py"/a \        "zypper --no-gpg-checks in -y https://packages.local/repository/casmrel-755/cray-node-exporter-1.2.2.1-1.x86_64.rpm"' /tmp/$xName
     fi
     if [[ "$storage_node" =~ "ncn-s001" ]]
     then
