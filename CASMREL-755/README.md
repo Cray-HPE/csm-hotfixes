@@ -28,37 +28,37 @@ ncn-m001# ./install-hotfix.sh
 
 ### Node exporter:
 
-1. Confirm node-exporter is running on each storage node
+1. Confirm node-exporter is running on each storage node. This command can be run from a master node.  Validate that the result contains `go_goroutines` (replace ncn-s001 below with each storage node):
 
    ```bash
    curl -s http://ncn-s001:9100/metrics |grep go_goroutines|grep -v "#"
    go_goroutines 8
    ```
 
-1. Confirm manifests were updated on each master node
+1. Confirm manifests were updated on each master node (repeat on each master node):
 
    ```bash
-   ncn-m# grep bind *
+   ncn-m# grep bind /etc/kubernetes/manifests/*
    kube-controller-manager.yaml:    - --bind-address=0.0.0.0
    kube-scheduler.yaml:    - --bind-address=0.0.0.0
    ```
 
-1. Confirm updated sysmgmt-health chart was deployed
+1. Confirm updated sysmgmt-health chart was deployed.  This command can be executed on a master node -- confirm the `cray-sysmgmt-health-0.12.6` chart version:
 
    ```bash
-   ncn-m#/etc/kubernetes/manifests # helm ls -n sysmgmt-health
+   ncn-m# helm ls -n sysmgmt-health
    NAME               	NAMESPACE     	REVISION	UPDATED                               	STATUS  	CHART                     	APP VERSION
-   cray-sysmgmt-health	sysmgmt-health	2       	2021-09-10 16:45:12.00113666 +0000 UTC	deployed	cray-sysmgmt-health-0.12.6
+   cray-sysmgmt-health	sysmgmt-health	2       	2021-09-10 16:45:12.00113666 +0000 UTC	deployed	cray-sysmgmt-health-0.12.6      8.15.4
    ```
 
 1. Confirm updates to BSS for cloud-init runcmd
 
-   **`IMPORTANT:`** The xnames below may not reflect the xnames in the environment where the hotfix is being applied.  Please ensure you replace the xnames with the correct xnames in the below examples.
+   **`IMPORTANT:`** Ensure you replace `XNAME` with the correct xname in the below examples (executing the `/opt/cray/platform-utils/getXnames.sh` script on a master node will display xnames):
 
-   Example for a master node.  This should be checked on each master node.
+   Example for a master node -- this should be checked for each master node.  Validate the three `sed` commands are returned in the output.
 
    ```bash
-   ncn-m# cray bss bootparameters list --name x3000c0s1b0n0 --format=json | jq '.[]|."cloud-init"."user-data"'
+   ncn-m# cray bss bootparameters list --name XNAME --format=json | jq '.[]|."cloud-init"."user-data"'
    {
      "hostname": "ncn-m001",
      "local_hostname": "ncn-m001",
@@ -84,10 +84,10 @@ ncn-m001# ./install-hotfix.sh
    }
    ```
 
-   Example for a storage node.  This should be checked on each storage node.
+   Example for a storage node -- this should be checked for each storage node.  Validate the `zypper` command is returned in the output.
 
    ```bash
-   ncn-m001:~ # cray bss bootparameters list --name x3000c0s13b0n0 --format=json | jq '.[]|."cloud-init"."user-data"'
+   ncn-m001:~ # cray bss bootparameters list --name XNAME --format=json | jq '.[]|."cloud-init"."user-data"'
    {
      "hostname": "ncn-s001",
      "local_hostname": "ncn-s001",
@@ -163,7 +163,7 @@ NOTE: All examples below will use the node seen in the above example.
 
 ## Notes:
 
-1. After this hotfix is installed, the changes related to installing the node-exporter on the storage node will persist if a storage node is rebuilt (due to hardware failure or otherwise).  However, after rebuilding a storage node, the `CephMonVersionMismatch` may start alerting in prometheus.  If so, restarting the active Ceph mgr process may be necessary in order to clear the alert.  The following command will restart the active mgr process, and can be executed on any storage node:
+1. If a storage node is rebuilt (due to hardware failure or otherwise) after this hotfix is installed, the changes related to installing the node-exporter on the storage node will persist.  However, after rebuilding a storage node, the `CephMonVersionMismatch` may start alerting in prometheus.  If so, restarting the active Ceph mgr process may be necessary in order to clear the alert.  The following command will restart the active mgr process, and can be executed on any storage node:
 
    ```
    ncn-s00(1/2/3): ceph mgr fail $(ceph mgr dump | jq -r .active_name)
