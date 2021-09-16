@@ -183,3 +183,5 @@ NOTE: All examples below will use the node seen in the above example.
    ```
 
    The `CephMonVersionMismatch` prometheus alert should clear within ten minutes after restarting active Ceph mgr process.
+
+2. After the application of this hotfix, the `TargetDown` alert may fire for the `cray-sysmgmt-health-dhcp-kea-exporter` service.  This is a known issue and will be addressed in the next CSM patch release (0.9.6).

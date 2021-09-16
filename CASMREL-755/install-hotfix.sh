@@ -24,7 +24,7 @@ kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}'
 # Update cray-hms-hmnfd
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-hmnfd).version' 1.8.7
 
-# Update the product catalog to report CSM 0.9.11
+# Update the product catalog to report CSM 0.9.12
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).values.cray-import-config.import_job.CF_IMPORT_PRODUCT_VERSION' "$RELEASE_VERSION"
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).values.cray-import-config.catalog.image.tag' 0.0.9
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-csm-barebones-recipe-install).values.cray-import-kiwi-recipe-image.import_job.PRODUCT_VERSION' "$RELEASE_VERSION"
