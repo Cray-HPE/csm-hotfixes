@@ -10,6 +10,19 @@ This procedure covers applying the hotfix for the following:
 
 * The cray cli is used during the application of this hotfix, and therefore must be configured and operational.
 
+* Resolve any issues with charts that failed to deploy. In the example below, all charts deployed successfully.
+
+```bash
+ncn-m001# helm ls -A | grep -v deployed
+ncn-m001#
+```
+
+* Run the ncnHealthChecks. See the ncnHealthChecks section in /usr/share/doc/metal/008-CSM-VALIDATION.md for more information.
+
+```bash
+ncn-m001# /opt/cray/platform-utils/ncnHealthChecks.sh
+```
+
 ## Setup
 
 1. Copy the tar file to a master node
