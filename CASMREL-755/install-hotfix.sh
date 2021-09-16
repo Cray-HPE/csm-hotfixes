@@ -22,7 +22,7 @@ yq w -i "${workdir}/platform.yaml" 'spec.charts.(name==cray-sysmgmt-health).vers
 # Patch sysmgmt manifest
 kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/sysmgmt.yaml"
 # Update cray-hms-hmnfd
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-hmnfd).version' 1.7.5
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-hmnfd).version' 1.8.7
 
 # Update the product catalog to report CSM 0.9.11
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).values.cray-import-config.import_job.CF_IMPORT_PRODUCT_VERSION' "$RELEASE_VERSION"
