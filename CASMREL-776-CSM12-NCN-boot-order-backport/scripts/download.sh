@@ -1,7 +1,7 @@
 #!/bin/bash
 
 type curl 2>&1 >/dev/null || echo 2>& 'missing curl! script will fail'
-PIT_VER=1.2.3-1
+PIT_VER=1.2.5-1
 ILO_VER=3.2.3-1
 
 function getdeps {
