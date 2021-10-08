@@ -54,7 +54,7 @@ function deploy() {
 deploy "${workdir}/platform.yaml"
 
 # Redeploy core-services
-deploy "${workdir}/sysmgmt.yaml"
+deploy "${workdir}/core-services.yaml"
 
 annotation_cleanup
 set +x
