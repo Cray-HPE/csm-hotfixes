@@ -10,7 +10,7 @@ source "${ROOTDIR}/lib/install.sh"
 load-install-deps
 
 # Upload assets to existing repositories
-cat > /tmp/casmrel-755-repo.yaml << EOF
+cat > /tmp/casmrel-776-repo.yaml << EOF
 ---
 cleanup: null
 type: hosted

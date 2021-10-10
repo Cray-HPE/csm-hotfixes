@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright 2020-2021 Hewlett Packard Enterprise Development LP
-# Permalink:
+# Permalink: https://github.com/Cray-HPE/node-image-build/blob/ca52e1976c7fe6dfe73eaa0ea46cd729d81fc32b/boxes/ncn-common/files/scripts/metal/metal-lib.sh
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
 # to deal in the Software without restriction, including without limitation
