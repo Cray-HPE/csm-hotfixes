@@ -1,6 +1,6 @@
 #!/bin/bash
 # Author: Russell Bunch <doomslayer@hpe.com>
-# Permalink: https://github.com/Cray-HPE/node-image-build/blob/ca52e1976c7fe6dfe73eaa0ea46cd729d81fc32b/boxes/ncn-common/files/scripts/metal/install.sh
+# Permalink:
 trap "printf >&2 'Metal Install: [ % -20s ]' 'failed'" ERR TERM HUP INT
 trap "echo 'See logfile at: /var/log/cloud-init-metal.log'" EXIT
 set -e
