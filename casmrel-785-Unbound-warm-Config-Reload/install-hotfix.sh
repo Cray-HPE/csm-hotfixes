@@ -10,8 +10,43 @@ ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOTDIR}/lib/version.sh"
 source "${ROOTDIR}/scripts/host-record-import.sh"
 
+large_system=false
+backup_folder="/tmp/hotfix-unbound"
 
+case "$1" in
 
+    "shasta-1.4" | "csm-0.9")
+        version="0.3.9"
+    ;;
+    "shasta-1.5" | "csm-1.0")
+        version="0.4.9"
+    ;;
+    *)
+        echo "usage:"
+        echo 'install-hotfix.sh "version of shasta or csm" "large-system(optional)"'
+        echo ""
+        echo "Version of Shasta or CSM can be shasta-[1.3-1.7] or csm-[0.9-1.2]"
+        echo "Large systems are systems with more than 3000 computes."
+        echo "Examples:"
+        echo "./install-hotfix.sh shasta-1.3"
+        echo "or"
+        echo  "./install-hotfix.sh csm-1.0 large-system"
+        exit
+    ;;
+esac
+
+if [ ! -z "$2" ];then
+    case $2 in
+        "large-system")
+            large_system=true
+        ;;
+        *)
+            echo "Did you intend to enable large-system settings for cray-dns-unbound"
+            echo "Use: '"large-system"'"
+            exit
+        ;;
+    esac
+fi
 
 # Create scratch space
 workdir="$(mktemp -d)"
@@ -23,15 +58,23 @@ kubectl -n loftsman get cm loftsman-platform -o jsonpath='{.data.manifest\.yaml}
 # Get core-services manifest
 kubectl -n loftsman get cm loftsman-core-services  -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/core-services.yaml"
 
+# make backups
+mkdir /tmp/hotfix-unbound
+cp "${workdir}/platform.yaml" $backup_folder
+cp "${workdir}/core-services.yaml" backup_folder
+
 # Update cray-dns-unbound
-yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).version' 0.3.9
-yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.global.appVersion' 0.3.9
-yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.resources.requests.cpu' 4
-yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.resources.requests.memory' "4Gi"
+yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).version' $version
+yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.global.appVersion' $version
+
+
+if [ "$large_system" = true ] ; then
+    yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.resources.requests.cpu' 4
+    yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.resources.requests.memory' "4Gi"
+fi
 
 # update cached imaages in platform
-yq w -i "${workdir}/platform.yaml" 'spec.charts.(name==cray-precache-images).values.cacheImages.(.==dtr.dev.cray.com/cray/cray-dns-unbound*)' dtr.dev.cray.com/cray/cray-dns-unbound:0.3.9
-
+yq w -i "${workdir}/platform.yaml" 'spec.charts.(name==cray-precache-images).values.cacheImages.(.==dtr.dev.cray.com/cray/cray-dns-unbound*)' dtr.dev.cray.com/cray/cray-dns-unbound:"$version"
 # get host records from current cray-dns-unbound deploy
 check_unbound_records
 
