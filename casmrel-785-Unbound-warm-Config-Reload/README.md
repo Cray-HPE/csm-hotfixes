@@ -1,11 +1,11 @@
 # CRAY-DNS-UNBOUND - Warm Reload Hotfix
 
-This hotfix for cray-dns-unbound that enables warm reloaded DNS records and configurations.  The warm reload feature will remove the requirement of restarting cray-dns-unbound pods to update DNS records and/or configurations changes.
+This cray-dns-unbound hotfix enables warm reloading of DNS records and configuration files.  Warm reload removes the requirement of restarting cray-dns-unbound pods to update DNS records and/or configurations changes.
 
 
 ## prerequisites:
 - Shasta 1.4 or newer
-- Kubernetes admin access
+- Kubernetes administrative access
 - Cray CLI access
 
 ## Changelog:
