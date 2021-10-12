@@ -37,12 +37,12 @@ esac
 
 if [ ! -z "$2" ];then
     case $2 in
-        "large-system")
+        "increase-resources")
             large_system=true
         ;;
         *)
-            echo "Did you intend to enable large-system settings for cray-dns-unbound"
-            echo "Use: '"large-system"'"
+            echo "Did you intend to enable increase-resources settings for cray-dns-unbound"
+            echo "Use: '"increase-resources"'"
             exit
         ;;
     esac

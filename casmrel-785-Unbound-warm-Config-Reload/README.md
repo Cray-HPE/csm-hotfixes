@@ -6,21 +6,23 @@ This hotfix for cray-dns-unbound that enables warm reloaded DNS records and conf
 ## prerequisites:
 - Shasta 1.4 or newer
 - Kubernetes admin access
-- Cray CLI access
+
 
 ## Changelog:
 - cray-dhcp-unbound pod does not need to be restarted when loading new configs or DNS records.
 - cray-dns-unbound will not start or load empty DNS record list.  This includes resetting DNS records via configmap
+- deploying cray-dns-unbound chart can pass DNS host record list.
 
 
 ## Usage:
         
      
-install-hotfix.sh `version of shasta or csm` `large-system(optional)`
+install-hotfix.sh `version of shasta or csm` `increase-resources(optional)`
         
 
 Version of Shasta or CSM can be shasta-[1.4-1.5] or csm-[0.9-1.0].
-Large systems are systems with more than 3000 computes.
+Increase-resources is helpful for systems with more than 3000 computes.  The cray-dhcp-unbound pod resources go from 2CPU->4CPU and memory from 2GB to 4GB.
+
 Examples:
 	
 	
@@ -43,8 +45,8 @@ or
 ```
 
 ## Rollback
-
+- rolling back cray-dns-unbound
 ```
 	helm rollback -n services cray-dns-unbound
-
 ```
+- 
