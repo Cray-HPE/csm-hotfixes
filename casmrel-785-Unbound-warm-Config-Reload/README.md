@@ -37,7 +37,7 @@ or
        
        
 ## Troubleshooting:
-- Check cray-dns-unbound pod logs to verify the mounted folder `/configmap` identifier matches the configmap version.  Following command gets the configmap version.
+- Check cray-dns-unbound pod logs to verify the mounted folder `/configmap` identifier matches the configmap version.  Use the following command to retrieve the configmap version.
 ```
     kubectl get cm -n services cray-dns-unbound -o json |jq .metadata.resourceVersion
 ```
