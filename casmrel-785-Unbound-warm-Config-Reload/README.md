@@ -11,6 +11,7 @@ This cray-dns-unbound hotfix enables warm reloading of DNS records and configura
 - cray-dhcp-unbound pod does not need to be restarted when loading new configs or DNS records.
 - cray-dns-unbound will not start or load empty DNS record list.  This includes resetting DNS records via configmap
 - deploying cray-dns-unbound chart can pass DNS host record list.
+- /srv/unbound is mounted from configmap instead of being copied into the container build.
 
 
 ## Usage:
