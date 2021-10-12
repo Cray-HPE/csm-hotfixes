@@ -22,7 +22,7 @@ install-hotfix.sh `version of shasta or csm` `increase-resources(optional)`
 
 Version of Shasta or CSM can be shasta-[1.4-1.5] or csm-[0.9-1.0].
 
-Increase-resources is helpful for systems with more than 3000 computes.  The cray-dhcp-unbound pod resources go from 2CPU->4CPU and memory from 2GB to 4GB.
+Increase-resources is helpful for systems with more than 3000 computes.  The cray-dhcp-unbound pod resources go from 2CPU -> 4CPU and memory from 2GB -> 4GB.
 
 Examples:
 	
