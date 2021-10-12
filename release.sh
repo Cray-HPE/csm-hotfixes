@@ -59,7 +59,7 @@ while [[ $# -gt 0 ]]; do
     rm -f "${BUILDDIR}/rpm/index.yaml"
     echo >&2 "Error: Not supported"
     exit 2
-    #rpm-sync "${HOTFIXDIR}/rpm/index.yaml" "${BUILDDIR}/rpm"
+    rpm-sync "${HOTFIXDIR}/rpm/index.yaml" "${BUILDDIR}/rpm"
   fi
 
   # Sync container images
