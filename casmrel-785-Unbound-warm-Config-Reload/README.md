@@ -46,8 +46,9 @@ Check `cray-dns-unbound` pod logs to verify the mounted folder `/configmap` iden
 ncn# kubectl get cm -n services cray-dns-unbound -o json |jq .metadata.resourceVersion
 ```
 ## **NOTICE**
-**This hotfix will need to be re-applied after installing `csm-1.0`.**<br>
-**Does not need to be re-applied when installing `csm-1.0.1`.**
+
+**This hotfix will need to be re-applied after installing an versions between `csm-0.9.4` to `csm-1.0`.** <br>
+**The hostfix does not need to be re-applied when installing `csm-1.0.1` newer.**
 
 ## Rollback
 
