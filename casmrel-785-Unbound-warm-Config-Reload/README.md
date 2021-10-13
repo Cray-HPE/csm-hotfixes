@@ -48,7 +48,7 @@ ncn# kubectl get cm -n services cray-dns-unbound -o json |jq .metadata.resourceV
 ## **NOTICE**
 
 **This hotfix will need to be re-applied after installing an versions between `csm-0.9.4` to `csm-1.0`.** <br>
-**This hotfix does not need to be re-applied when installing `csm-1.0.1` newer.**
+**This hotfix does not need to be re-applied when installing `csm-1.0.1` or newer.**
 
 ## Rollback
 
