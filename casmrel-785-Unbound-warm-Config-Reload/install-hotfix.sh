@@ -61,7 +61,7 @@ kubectl -n loftsman get cm loftsman-core-services  -o jsonpath='{.data.manifest\
 # make backups
 mkdir /tmp/hotfix-unbound
 cp "${workdir}/platform.yaml" $backup_folder
-cp "${workdir}/core-services.yaml" backup_folder
+cp "${workdir}/core-services.yaml" $backup_folder
 
 # Update cray-dns-unbound
 yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).version' $version
