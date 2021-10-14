@@ -6,7 +6,6 @@ set -o pipefail
 
 WORKING_DIR=$(dirname $0)
 source "${WORKING_DIR}/lib/version.sh"
-source "${WORKING_DIR}/scripts/download.sh"
 pitinit_ver='1.2.6-1'
 ilorest_ver='3.2.3-1'
 # Installs RPMs, or fetches them if possible.
