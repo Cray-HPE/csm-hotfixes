@@ -11,7 +11,7 @@ source "${ROOTDIR}/lib/version.sh"
 source "${ROOTDIR}/scripts/host-record-import.sh"
 
 large_system=false
-backup_folder="/tmp/hotfix-unbound"
+backup_folder="/tmp/unbound-hotfix-$(date +"%F-%H%M")"
 
 case "$1" in
 
@@ -61,7 +61,7 @@ kubectl -n loftsman get cm loftsman-core-services  -o jsonpath='{.data.manifest\
 # make backups
 mkdir /tmp/hotfix-unbound
 cp "${workdir}/platform.yaml" $backup_folder
-cp "${workdir}/core-services.yaml" backup_folder
+cp "${workdir}/core-services.yaml" $backup_folder
 
 # Update cray-dns-unbound
 yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).version' $version
