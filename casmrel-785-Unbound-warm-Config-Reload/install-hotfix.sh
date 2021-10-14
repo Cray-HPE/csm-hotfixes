@@ -11,7 +11,7 @@ source "${ROOTDIR}/lib/version.sh"
 source "${ROOTDIR}/scripts/host-record-import.sh"
 
 large_system=false
-backup_folder="/tmp/hotfix-unbound"
+backup_folder="/tmp/unbound-hotfix-$(date +"%F-%H%M")"
 
 case "$1" in
 
