@@ -59,7 +59,7 @@ kubectl -n loftsman get cm loftsman-platform -o jsonpath='{.data.manifest\.yaml}
 kubectl -n loftsman get cm loftsman-core-services  -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/core-services.yaml"
 
 # make backups
-mkdir /tmp/hotfix-unbound
+mkdir /tmp/$backup_folder
 cp "${workdir}/platform.yaml" $backup_folder
 cp "${workdir}/core-services.yaml" $backup_folder
 
