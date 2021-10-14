@@ -65,7 +65,7 @@ function run {
 
 function main {
     # Load artifacts into nexus
-   # ${WORKING_DIR}/lib/setup-nexus.sh
+    ${WORKING_DIR}/lib/setup-nexus.sh
     rpm -q ilorest pit-init || install_rpms
     copy
     run
