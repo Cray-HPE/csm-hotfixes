@@ -145,4 +145,7 @@ function nexus-repositories-create() {
         -e "NEXUS_URL=${NEXUS_URL}" \
         "$CRAY_NEXUS_SETUP_IMAGE" \
         "nexus-repositories-create" "$repofile"
+    while ! curl -I https://packages.local/repository/casmrel-776/repodata/repomd.xml ; do
+        sleep 2
+    done
 }
