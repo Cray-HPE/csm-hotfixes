@@ -111,6 +111,10 @@ function nexus-upload() {
         -e "NEXUS_URL=${NEXUS_URL}" \
         "$CRAY_NEXUS_SETUP_IMAGE" \
         "nexus-upload-repo-${repotype}" "/data/" "$reponame"
+    echo "Waiting for NEXUS to create repodata ..."
+    while ! curl -I -f "$NEXUS_URL/repository/${reponame}/repodata/repomd.xml" ; do
+        sleep 2
+    done
 }
 
 # usage: skopeo-sync DIRECTORY
@@ -133,7 +137,6 @@ function skopeo-sync() {
             sync --scoped --src dir --dest docker --dest-tls-verify=false /image "${NEXUS_REGISTRY}" || return
     done
 }
-
 function nexus-repositories-create() {
     local src="$1"
     local repofile="$2"
@@ -145,7 +148,4 @@ function nexus-repositories-create() {
         -e "NEXUS_URL=${NEXUS_URL}" \
         "$CRAY_NEXUS_SETUP_IMAGE" \
         "nexus-repositories-create" "$repofile"
-    while ! curl -I https://packages.local/repository/casmrel-776/repodata/repomd.xml ; do
-        sleep 2
-    done
 }
