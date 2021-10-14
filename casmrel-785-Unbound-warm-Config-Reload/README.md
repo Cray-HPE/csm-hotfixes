@@ -35,7 +35,7 @@ ncn# ./install-hotfix.sh shasta-1.4
 or
 
 ```bash
-ncn# ./install-hotfix.sh csm-1.0 large-system
+ncn# ./install-hotfix.sh csm-1.0 increase-resources
 ```
 
 ## Troubleshooting
