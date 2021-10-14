@@ -1,0 +1,4 @@
+https://artifactory.algol60.net/artifactory/csm-rpms/hpe/stable/:
+  rpms:
+    - ilorest-3.2.3-1.x86_64
+    - pit-init-1.2.6-1.noarch
