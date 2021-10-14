@@ -56,9 +56,6 @@ while [[ $# -gt 0 ]]; do
   # Sync RPMs (not supported)
   if [[ -f "${HOTFIXDIR}/rpm/index.yaml" ]]; then
     echo "Syncing RPM index"
-    rm -f "${BUILDDIR}/rpm/index.yaml"
-    echo >&2 "Error: Not supported"
-    exit 2
     rpm-sync "${HOTFIXDIR}/rpm/index.yaml" "${BUILDDIR}/rpm"
   fi
 

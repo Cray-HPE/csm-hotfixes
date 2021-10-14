@@ -7,18 +7,15 @@ set -o pipefail
 WORKING_DIR=$(dirname $0)
 source "${WORKING_DIR}/lib/version.sh"
 source "${WORKING_DIR}/scripts/download.sh"
-
+pitinit_ver='1.2.6-1'
+ilorest_ver='3.2.3-1'
 # Installs RPMs, or fetches them if possible.
 function install_rpms {
-    local ilorest=0
-    local pit_init=0
-    rpm -Uvh ${WORKING_DIR}/rpm/pit-init-$PIT_VER.noarch.rpm || pit_init=1
-    rpm -Uvh ${WORKING_DIR}/rpm/ilorest-$ILO_VER.x86_64.rpm || ilorest=1
-    if [ $ilorest = 1 ] || [ $pitinit = 1] ; then
-        rm -f ${WORKING_DIR}/rpm/pit-init-$PIT_VER.noarch.rpm
-        rm -f ${WORKING_DIR}/rpm/ilorest-$ILO_VER.x86_64.rpm
-        getdeps # sourced from download.sh
-    fi
+    zypper --no-gpg-checks \
+        --plus-repo https://packages.local/repository/casmrel-776 \
+        -n in -y \
+        "ilorest=$ilorest_ver" \
+        "pit-init=$pitinit_ver"
 }
 
 # Copies files into place.
