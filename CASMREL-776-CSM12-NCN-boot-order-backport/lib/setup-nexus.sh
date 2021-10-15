@@ -9,25 +9,9 @@ source "${ROOTDIR}/lib/install.sh"
 
 load-install-deps
 
-# Upload assets to existing repositories
-cat > /tmp/casmrel-776-repo.yaml << EOF
----
-cleanup: null
-type: hosted
-format: yum
-yum:
-  repodataDepth: 0
-  deployPolicy: STRICT
-name: casmrel-776
-online: true
-storage:
-  blobStoreName: default
-  strictContentTypeValidation: false
-  writePolicy: ALLOW_ONCE
-EOF
-
-nexus-repositories-create "/tmp" "/tmp/casmrel-776-repo.yaml"
-nexus-upload yum "${ROOTDIR}/rpm" "casmrel-776"
+nexus-setup repositories "${ROOTDIR}/nexus-repositories.yaml"
+nexus-wait-for-rpm-repomd casmrel-776
+nexus-upload yum "${ROOTDIR}/rpm" casmrel-776
 
 clean-install-deps
 
