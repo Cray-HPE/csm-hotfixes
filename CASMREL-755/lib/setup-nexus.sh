@@ -14,8 +14,8 @@ skopeo-sync "${ROOTDIR}/docker"
 nexus-upload helm "${ROOTDIR}/helm" "${CHARTS_REPO:-"charts"}"
 
 nexus-setup repositories "${ROOTDIR}/nexus-repositories.yaml"
-nexus-wait-for-rpm-repomd casmrel-755
 nexus-upload yum "${ROOTDIR}/rpm" casmrel-755
+nexus-wait-for-rpm-repomd casmrel-755
 
 clean-install-deps
 

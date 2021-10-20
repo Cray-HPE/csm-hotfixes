@@ -10,8 +10,8 @@ source "${ROOTDIR}/lib/install.sh"
 load-install-deps
 
 nexus-setup repositories "${ROOTDIR}/nexus-repositories.yaml"
-nexus-wait-for-rpm-repomd casmrel-776
 nexus-upload yum "${ROOTDIR}/rpm" casmrel-776
+nexus-wait-for-rpm-repomd casmrel-776
 
 clean-install-deps
 
