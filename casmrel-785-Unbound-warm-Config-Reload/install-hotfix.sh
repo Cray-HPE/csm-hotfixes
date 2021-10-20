@@ -63,6 +63,20 @@ mkdir $backup_folder
 cp "${workdir}/platform.yaml" $backup_folder
 cp "${workdir}/core-services.yaml" $backup_folder
 
+# Patch manifests to use charts repository instead of helm directory
+if [[ "$version" == "0.4.9" ]]; then
+    find "$workdir" -name '*.yaml' | while read manifest; do
+        yq w -i -s - "$manifest" << EOF
+- command: update
+  path: spec.sources.charts[*].type
+  value: repo
+- command: update
+  path: spec.sources.charts[*].location
+  value: http://packages.local/repository/charts
+EOF
+    done
+fi
+
 # Update cray-dns-unbound
 yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).version' $version
 yq w -i "${workdir}/core-services.yaml" 'spec.charts.(name==cray-dns-unbound).values.global.appVersion' $version
