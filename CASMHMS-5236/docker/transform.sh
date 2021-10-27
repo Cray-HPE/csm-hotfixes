@@ -12,5 +12,5 @@ DISTDIR=$1
 (
     cd "${DISTDIR}"
     mkdir dtr.dev.cray.com
-    mv arti.dev.cray.com/csm-docker-stable-local/ dtr.dev.cray.com/cray/
+    mv -v artifactory.algol60.net/csm-docker/stable/ dtr.dev.cray.com/cray/
 )
