@@ -35,7 +35,7 @@ BMC.
 ```
 {
   "Username": "root",
-  "Password": "<REDACTED>"
+  "Password": "<REDACTED>",
   "Targets": [ "x1000c0s0b0"]
 }
   
