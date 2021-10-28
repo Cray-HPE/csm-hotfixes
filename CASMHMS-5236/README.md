@@ -66,3 +66,9 @@ This should succeed.
 4. Change the password back to the original password, and verify, using steps 1-3 above.
 
 
+NOTICE
+
+This hotfix will need to be re-applied after installing an versions between 
+csm-0.9.4 to csm-1.0.  This hotfix does not need to be re-applied when installing 
+csm-1.0.1 or newer.
+
