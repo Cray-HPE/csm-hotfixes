@@ -6,7 +6,7 @@ set -o pipefail
 
 WORKING_DIR=$(dirname $0)
 source "${WORKING_DIR}/lib/version.sh"
-pitinit_ver='1.2.6-1'
+pitinit_ver='1.2.11-1'
 ilorest_ver='3.2.3-1'
 # Installs RPMs, or fetches them if possible.
 function install_rpms {
