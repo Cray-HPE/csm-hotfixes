@@ -39,7 +39,14 @@ source "${ROOTDIR}/lib/version.sh"
 ${ROOTDIR}/lib/setup-nexus.sh
 ```
 
-Includng those lines at the head of the hotfix will ensure the right libraries and setup is done.
+Including those lines at the head of the hotfix will ensure the right libraries and setup is done.
+
+### Hotfix - Including RPMs
+
+To include RPMs in your hotfix, please add them to the CSM repository to the respective YAML files
+( compute or non-compute ):
+- GitHub: https://github.com/Cray-HPE/csm/tree/main/rpm/cray/csm
+- Stash (legacy): https://stash.us.cray.com/projects/CSM
 
 
 #### Conventions:

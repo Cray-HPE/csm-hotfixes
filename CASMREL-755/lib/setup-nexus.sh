@@ -13,24 +13,9 @@ load-install-deps
 skopeo-sync "${ROOTDIR}/docker"
 nexus-upload helm "${ROOTDIR}/helm" "${CHARTS_REPO:-"charts"}"
 
-cat > /tmp/casmrel-755-repo.yaml << EOF
----
-cleanup: null
-type: hosted
-format: yum
-yum:
-  repodataDepth: 0
-  deployPolicy: STRICT
-name: casmrel-755
-online: true
-storage:
-  blobStoreName: default
-  strictContentTypeValidation: false
-  writePolicy: ALLOW_ONCE
-EOF
-
-nexus-repositories-create "/tmp" "/tmp/casmrel-755-repo.yaml"
-nexus-upload yum "${ROOTDIR}/rpm" "casmrel-755"
+nexus-setup repositories "${ROOTDIR}/nexus-repositories.yaml"
+nexus-upload yum "${ROOTDIR}/rpm" casmrel-755
+nexus-wait-for-rpm-repomd casmrel-755
 
 clean-install-deps
 

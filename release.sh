@@ -56,10 +56,7 @@ while [[ $# -gt 0 ]]; do
   # Sync RPMs (not supported)
   if [[ -f "${HOTFIXDIR}/rpm/index.yaml" ]]; then
     echo "Syncing RPM index"
-    rm -f "${BUILDDIR}/rpm/index.yaml"
-    echo >&2 "Error: Not supported"
-    exit 2
-    #rpm-sync "${HOTFIXDIR}/rpm/index.yaml" "${BUILDDIR}/rpm"
+    rpm-sync "${HOTFIXDIR}/rpm/index.yaml" "${BUILDDIR}/rpm"
   fi
 
   # Sync container images
@@ -79,14 +76,14 @@ while [[ $# -gt 0 ]]; do
   # Remove empty directories
   find "$BUILDDIR" -empty -type d -delete
 
-  # Vendor install tools for container images
+  # Vendor skopeo image to upload container images
   if [[ -d "${BUILDDIR}/docker" ]]; then
     echo "Vendoring skopeo image in distribution"
     vendor-install-deps --no-cray-nexus-setup "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
   fi
 
-  # Vendor install tools for helm charts
-  if [[ -d "${BUILDDIR}/helm" ]]; then
+  # Vendor cray-nexus-setup image for Nexus clients
+  if [[ -f "${BUILDDIR}/lib/setup-nexus.sh" || -d "${BUILDDIR}/helm" ]]; then
     echo "Vendoring cray-nexus-setup image in distribution"
     vendor-install-deps --no-skopeo "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
   fi
