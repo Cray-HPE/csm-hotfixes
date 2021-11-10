@@ -2,7 +2,7 @@
 
 # Copyright 2020 Hewlett Packard Enterprise Development LP
 
-: "${RELEASE:="${RELEASE_NAME:="casmrel-776"}-${RELEASE_VERSION:="1.0.11"}"}"
+: "${RELEASE:="${RELEASE_NAME:="casmrel-776"}-${RELEASE_VERSION:="1.1.0"}"}"
 
 # return if sourced
 return 0 2>/dev/null
