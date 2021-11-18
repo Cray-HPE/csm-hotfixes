@@ -19,7 +19,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 # (MIT License)
-
+# Permalink to original lib: https://github.com/Cray-HPE/node-image-build/blob/cfad25b84431cfc5c3b8935df78a7ce68d4a8be4/boxes/ncn-common/files/scripts/metal/metal-lib.sh
 fslabel=BOOTRAID
 type mprint >/dev/null 2>&1 || . /srv/cray/scripts/common/lib.sh
 
@@ -39,14 +39,14 @@ install_grub2() {
     local working_path=${1:-/metal/recovery}
     mount -v -L $fslabel $working_path 2>/dev/null || echo 'continuing ...'
     # Remove all existing ones; this script installs the only bootloader.
-    for entry in $(efibootmgr | awk -F '*' '/cray/ {print $1}'); do
+    for entry in $(efibootmgr | awk -F '*' '/CRAY/ {print $1}'); do
          efibootmgr -q -b ${entry:4:8} -B
     done
 
     # Install grub2.
     local name=$(grep PRETTY_NAME /etc/*release* | cut -d '=' -f2 | tr -d '"')
     local index=0
-    [ -z "$name" ] & name='CRAY Linux'
+    [ -z "$name" ] && name='CRAY Linux'
     for disk in $(mdadm --detail $(blkid -L $fslabel) | grep /dev/sd | awk '{print $NF}'); do
         # Add '--suse-enable-tpm' to grub2-install once we need TPM.
         grub2-install --no-rs-codes --suse-force-signed --root-directory $working_path --removable "$disk"
@@ -188,6 +188,12 @@ function set_static_fallback() {
     ipmitool lan set $lan defgw ipaddr $defgw || :
     ipmitool lan print $lan || :
     rm -f $netconf
+}
+
+function reset_bmc() {
+    local reset=${1:-'cold'}
+    ipmitool mc reset "$reset"
+    sleep 5 # Allow the BMC to go offline to prevent false-positive for connectivity checks.
 }
 
 function enable_amsd() {
@@ -437,5 +443,7 @@ function install_csm_rpms() {
         | jq -r  '.items[] | .assets[] | .downloadUrl' | grep goss-servers | sort -V | tail -1)
     csm_testing_url=$(paginate "https://packages.local/service/rest/v1/components?repository=csm-sle-15sp2" \
         | jq -r  '.items[] | .assets[] | .downloadUrl' | grep csm-testing | sort -V | tail -1)
-    zypper install -y $goss_servers_url $csm_testing_url && systemctl enable goss-servers && systemctl restart goss-servers
+    platform_utils_url=$(paginate "https://packages.local/service/rest/v1/components?repository=csm-sle-15sp2" \
+        | jq -r  '.items[] | .assets[] | .downloadUrl' | grep platform-utils | sort -V | tail -1)
+    zypper install -y $goss_servers_url $csm_testing_url $platform_utils_url && systemctl enable goss-servers && systemctl restart goss-servers
 }
