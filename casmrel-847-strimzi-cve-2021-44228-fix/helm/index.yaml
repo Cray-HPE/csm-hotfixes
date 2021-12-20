@@ -1,0 +1,4 @@
+https://artifactory.algol60.net/artifactory/csm-helm-charts/:
+  charts:
+    cray-kafka-operator:
+    - 0.4.2
