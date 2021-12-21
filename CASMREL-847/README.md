@@ -6,7 +6,7 @@ This fix addresses **CVE-2021-44228** in the strimzi operator 0.15.0 container. 
 
 >**NOTE**
 >
-> The fix removes `JdniLookup.class` from affected log4j jar files but it doesn't change the verion of jar files. That may cause false postive reports from certain scanning tools.
+> The fix removes `JdniLookup.class` from affected log4j jar files but it doesn't change the version of jar files. That may cause false postive reports from certain scanning tools.
 
 ## How to install
 
