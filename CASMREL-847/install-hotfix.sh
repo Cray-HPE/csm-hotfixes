@@ -17,10 +17,19 @@ trap "rm -fr '${workdir}'" EXIT
 kubectl -n loftsman get cm loftsman-platform -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/platform.yaml"
 # Update cray-kafka-operator
 yq w -i "${workdir}/platform.yaml" 'spec.charts.(name==cray-kafka-operator).version' 0.4.2
-yq w -i "${workdir}/platform.yaml"  'spec.sources.charts(name==csm).location' https://packages.local/repository/charts
-yq w -i "${workdir}/platform.yaml"  'spec.sources.charts(name==csm).type' repo
-yq w -i "${workdir}/platform.yaml"  'spec.sources.charts(name==csm-algol60).location' https://packages.local/repository/charts
-yq w -i "${workdir}/platform.yaml"  'spec.sources.charts(name==csm-algol60).type' repo
+
+# get all installed csm version into a file
+kubectl get cm -n services cray-product-catalog -o json | jq  -r '.data.csm' | yq r -  -d '*' -j | jq -r 'keys[]' > /tmp/csm_versions
+# sort -V: version sort
+highest_version=$(sort -V /tmp/csm_versions | tail -1)
+
+if [[ "$highest_version" == "1.0"*  ]];then
+    echo "patch 1.0 manifest"
+    yq w -i "${workdir}/platform.yaml"  'spec.sources.charts(name==csm).location' https://packages.local/repository/charts
+    yq w -i "${workdir}/platform.yaml"  'spec.sources.charts(name==csm).type' repo
+    yq w -i "${workdir}/platform.yaml"  'spec.sources.charts(name==csm-algol60).location' https://packages.local/repository/charts
+    yq w -i "${workdir}/platform.yaml"  'spec.sources.charts(name==csm-algol60).type' repo
+fi
 
 # Load artifacts into nexus
 ${ROOTDIR}/lib/setup-nexus.sh
