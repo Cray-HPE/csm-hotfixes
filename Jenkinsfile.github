@@ -78,9 +78,10 @@ pipeline {
     }
 
     stage('Upload to GCP') {
-      when {
-        branch 'master'
-      }
+      // TODO: REVERT THIS, DI IS CREATING A RELEASE BUILD FOR TESTING
+      // when {
+      //   branch 'master'
+      // }
       steps {
         script {
           sh '''
