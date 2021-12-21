@@ -1,5 +1,5 @@
 artifactory.algol60.net/csm-docker/stable:
   tls-verify: true
   images:
-    strimzi/operator:
+    quay.io/strimzi/operator:
     - 0.15.0-noJdniLookupClass
