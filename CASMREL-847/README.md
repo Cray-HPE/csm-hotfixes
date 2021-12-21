@@ -7,4 +7,4 @@ This container contains a version of log4j with the JdniLookup.class removed.
 
 ## How to install
 
-Run the `lib/setup-nexus.sh` script in this hotfix.
+Run the `./install-hotfix.sh` script in this hotfix.
