@@ -15,8 +15,12 @@ trap "rm -fr '${workdir}'" EXIT
 
 # Patch platform manifest
 kubectl -n loftsman get cm loftsman-platform -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/platform.yaml"
-# Update cray-sysmgmt-health
+# Update cray-kafka-operator
 yq w -i "${workdir}/platform.yaml" 'spec.charts.(name==cray-kafka-operator).version' 0.4.2
+yq w -i "${workdir}/platform.yaml"  'spec.sources.charts(name==csm).location' https://packages.local/repository/charts
+yq w -i "${workdir}/platform.yaml"  'spec.sources.charts(name==csm).type' repo
+yq w -i "${workdir}/platform.yaml"  'spec.sources.charts(name==csm-algol60).location' https://packages.local/repository/charts
+yq w -i "${workdir}/platform.yaml"  'spec.sources.charts(name==csm-algol60).type' repo
 
 # Load artifacts into nexus
 ${ROOTDIR}/lib/setup-nexus.sh
