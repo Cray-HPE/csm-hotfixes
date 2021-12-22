@@ -1,0 +1,11 @@
+--- /opt/cray/shasta-cfg-src/manifests/platform.yaml	2021-09-29 22:01:33.661516404 -0700
++++ /opt/cray/shasta-cfg-src-fixed/manifests/platform.yaml	2021-12-21 11:22:42.033195721 -0800
+@@ -113,7 +113,7 @@ spec:
+           docker_image: 'dtr.dev.cray.com/acid/spilo-12:1.6-p3'
+   - name: cray-kafka-operator
+     source: csm
+-    version: 0.4.1
++    version: 0.4.2
+     namespace: operators
+   - name: spire-intermediate
+     source: csm
