@@ -17,8 +17,10 @@ trap "rm -fr '${workdir}'" EXIT
 kubectl -n loftsman get cm loftsman-platform -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/sysmgmt.yaml"
 # Update csm-config
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).version' 1.9.8
-# Update bass
+# Update bss
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-bss).version' 2.0.3
+# Update cfs-operator
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-cfs-operator).version' 1.14.9
 
 # Load artifacts into nexus
 ${ROOTDIR}/lib/setup-nexus.sh

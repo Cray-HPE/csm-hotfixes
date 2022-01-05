@@ -4,3 +4,5 @@ https://artifactory.algol60.net/artifactory/csm-helm-charts/:
     - 2.0.3
     csm-config:
     - 1.9.8
+    cray-cfs-operator:
+    - 1.14.9
