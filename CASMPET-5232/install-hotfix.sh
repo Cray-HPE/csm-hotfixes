@@ -21,7 +21,7 @@ trap "rm -fr '${workdir}'" EXIT
 kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/sysmgmt.yaml"
 # Update csm-config
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).version' 1.9.8
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).values.cray-import-config.catalog.image.tag' 1.9.8
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).values.cray-import-config.catalog.image.tag' 1.3.1
 # Update bss
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-bss).version' 2.0.3
 # Update cfs-operator
