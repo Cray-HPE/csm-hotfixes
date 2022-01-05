@@ -2,7 +2,7 @@
 
 # Copyright 2020 Hewlett Packard Enterprise Development LP
 
-: "${RELEASE:="${RELEASE_NAME:="casmpet-5232"}-${RELEASE_VERSION:="1.0.0-dev.2"}"}"
+: "${RELEASE:="${RELEASE_NAME:="casmpet-5232"}-${RELEASE_VERSION:="1.0.0-dev.3"}"}"
 
 # return if sourced
 return 0 2>/dev/null

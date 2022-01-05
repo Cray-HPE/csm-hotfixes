@@ -9,3 +9,5 @@ artifactory.algol60.net/csm-docker/stable:
     - 1.14.9
     cray-aee:
     - 1.2.81
+    cray-product-catalog-update:
+    - 1.9.8
