@@ -78,9 +78,10 @@ pipeline {
     }
 
     stage('Upload to GCP') {
-      when {
-        branch 'master'
-      }
+      //TODO: debug 
+      // when {
+      //   branch 'master'
+      // }
       steps {
         script {
           sh '''
@@ -103,11 +104,12 @@ pipeline {
           '''
 
           def msgs = readFile("dist/slack.txt").split("\n")
-          for(String msg in msgs) {
-            if(params.SLACK_CHANNEL != "" && msg != "") {
-              slackSend(channel: params.SLACK_CHANNEL, color: "good", message: msg)
-            }
-          }
+          //TODO: remove debug code
+          // for(String msg in msgs) {
+          //   if(params.SLACK_CHANNEL != "" && msg != "") {
+          //     slackSend(channel: params.SLACK_CHANNEL, color: "good", message: msg)
+          //   }
+          // }
         }
       }
     }
