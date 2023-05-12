@@ -1,0 +1,5 @@
+https://artifactory.algol60.net/artifactory/csm-helm-charts/stable:
+  charts:
+    cray-bos:
+    - 2.0.12
+
