@@ -64,7 +64,7 @@ ncn-m001# ./install-hotfix.sh
    cray-sysmgmt-health	sysmgmt-health	2       	2021-09-10 16:45:12.00113666 +0000 UTC	deployed	cray-sysmgmt-health-0.12.6      8.15.4
    ```
 
-1. Confirm updates to BSS for cloud-init runcmd
+1. Confirm updates to BSS for cloud-init runcmd.
 
    **`IMPORTANT:`** Ensure you replace `XNAME` with the correct xname in the below examples (executing the `/opt/cray/platform-utils/getXnames.sh` script on a master node will display xnames):
 
