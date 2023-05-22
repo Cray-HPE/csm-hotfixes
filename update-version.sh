@@ -16,7 +16,7 @@ fi
 source "$script"
 
 ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
-source "${ROOTDIR}/vendor/stash.us.cray.com/scm/shastarelm/release/lib/release.sh"
+source "${ROOTDIR}/vendor/github.hpe.com/hpe/hpc-shastarelm-release/lib/release.sh"
 
 gen-version-sh "$RELEASE_NAME" "$version" > "$script"
 chmod +x "$script"
