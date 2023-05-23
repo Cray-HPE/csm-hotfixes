@@ -1,5 +1,5 @@
 @Library('csm-shared-library') _
-
+def credentialsId = 'artifactory-algol60'
 pipeline {
   agent {
     node { label 'metal-gcp-builder' }
@@ -28,7 +28,7 @@ pipeline {
       steps {
         sh '''#!/usr/bin/env bash
           # Pull release tools
-          source "./vendor/stash.us.cray.com/scm/shastarelm/release/lib/release.sh"
+          source "./vendor/github.hpe.com/hpe/hpc-shastarelm-release/lib/release.sh"
           docker pull "$PACKAGING_TOOLS_IMAGE"
           docker pull "$RPM_TOOLS_IMAGE"
           docker pull "$SKOPEO_IMAGE"
@@ -67,6 +67,7 @@ pipeline {
 
     stage('Build Hotfixes') {
       steps {
+       withCredentials([usernamePassword(credentialsId: credentialsId, usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_TOKEN')]) {
         sh '''
           while read VERSION_SH; do
             HOTFIX="${VERSION_SH%%/lib/version.sh}"
@@ -74,6 +75,7 @@ pipeline {
             ./release.sh "$HOTFIX"
           done < dist/build.txt
         '''
+       }
       }
     }
 

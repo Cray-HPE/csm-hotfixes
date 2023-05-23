@@ -15,7 +15,7 @@ set -o xtrace
 ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
 
 # Import release utilities
-source "${ROOTDIR}/vendor/stash.us.cray.com/scm/shastarelm/release/lib/release.sh"
+source "${ROOTDIR}/vendor/github.hpe.com/hpe/hpc-shastarelm-release/lib/release.sh"
 requires cp sed
 
 while [[ $# -gt 0 ]]; do
@@ -52,6 +52,12 @@ while [[ $# -gt 0 ]]; do
 
   # Remove index files from distribution
   rm -f "${BUILDDIR}/docker/index.yaml" "${BUILDDIR}/docker/transform.sh" "${BUILDDIR}/helm/index.yaml"
+
+  #code to store credentials in environment variable
+  if [ ! -z "$ARTIFACTORY_USER" ] && [ ! -z "$ARTIFACTORY_TOKEN" ]; then
+    export REPOCREDSVARNAME="REPOCREDSVAR"
+    export REPOCREDSVAR=$(jq --null-input --arg url "https://artifactory.algol60.net/artifactory/" --arg realm "Artifactory Realm" --arg user "$ARTIFACTORY_USER"   --arg password "$ARTIFACTORY_TOKEN"   '{($url): {"realm": $realm, "user": $user, "password": $password}}')
+  fi
 
   # Sync RPMs (not supported)
   if [[ -f "${HOTFIXDIR}/rpm/index.yaml" ]]; then
