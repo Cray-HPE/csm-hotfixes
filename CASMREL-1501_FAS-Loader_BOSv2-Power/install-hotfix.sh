@@ -35,12 +35,13 @@ workdir="$(mktemp -d)"
 trap "rm -fr '${workdir}'" EXIT
 
 # Patch sysmgmt manifest
-kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/sysmgmt.yaml"
+kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/sysmgmt-orig.yaml"
+cp "${workdir}/sysmgmt-orig.yaml" "${workdir}/sysmgmt-new.yaml"
 # Update cray-hms-firmware-action and cray-bos
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-firmware-action).version' 2.1.6
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-firmware-action).values.global.appVersion' 1.24.1
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-bos).version' 2.0.16
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-bos).values.global.appVersion' 2.0.16
+yq w -i "${workdir}/sysmgmt-new.yaml" 'spec.charts.(name==cray-hms-firmware-action).version' 2.1.6
+yq w -i "${workdir}/sysmgmt-new.yaml" 'spec.charts.(name==cray-hms-firmware-action).values.global.appVersion' 1.24.1
+yq w -i "${workdir}/sysmgmt-new.yaml" 'spec.charts.(name==cray-bos).version' 2.0.16
+yq w -i "${workdir}/sysmgmt-new.yaml" 'spec.charts.(name==cray-bos).values.global.appVersion' 2.0.16
 
 # get all installed csm version into a file
 kubectl get cm -n services cray-product-catalog -o json | jq  -r '.data.csm' | yq r -  -d '*' -j | jq -r 'keys[]' > /tmp/csm_versions
@@ -49,11 +50,30 @@ highest_version=$(sort -V /tmp/csm_versions | tail -1)
 
 if [[ "$highest_version" == "1.0"*  ]];then
     echo "patch 1.0 manifest"
-    yq w -i "${workdir}/sysmgmt.yaml"  'spec.sources.charts(name==csm).location' https://packages.local/repository/charts
-    yq w -i "${workdir}/sysmgmt.yaml"  'spec.sources.charts(name==csm).type' repo
-    yq w -i "${workdir}/sysmgmt.yaml"  'spec.sources.charts(name==csm-algol60).location' https://packages.local/repository/charts
-    yq w -i "${workdir}/sysmgmt.yaml"  'spec.sources.charts(name==csm-algol60).type' repo
+    yq w -i "${workdir}/sysmgmt-new.yaml"  'spec.sources.charts(name==csm).location' https://packages.local/repository/charts
+    yq w -i "${workdir}/sysmgmt-new.yaml"  'spec.sources.charts(name==csm).type' repo
+    yq w -i "${workdir}/sysmgmt-new.yaml"  'spec.sources.charts(name==csm-algol60).location' https://packages.local/repository/charts
+    yq w -i "${workdir}/sysmgmt-new.yaml"  'spec.sources.charts(name==csm-algol60).type' repo
 fi
+
+# convert to JSON for simpler Python-ing
+yq r -j "${workdir}/sysmgmt-new.yaml" > "${workdir}/sysmgmt-new.json"
+
+python3 -c "
+import json
+
+with open('${workdir}/sysmgmt-new.json', 'rt') as f:
+  manifest = json.load(f)
+
+chart_list = manifest['spec']['charts']
+manifest['spec']['charts'] = [ c for c in chart_list if c['name'] in { 'cray-hms-firmware-action', 'cray-bos' } ]
+
+with open('${workdir}/sysmgmt-new.json', 'wt') as f:
+  json.dump(manifest, f)
+"
+
+# convert back to YAML and lose the -new suffix
+yq r -P "${workdir}/sysmgmt-new.json" > "${workdir}/sysmgmt.yaml"
 
 # Load artifacts into nexus
 ${ROOTDIR}/lib/setup-nexus.sh
