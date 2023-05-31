@@ -36,9 +36,11 @@ trap "rm -fr '${workdir}'" EXIT
 
 # Patch sysmgmt manifest
 kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/sysmgmt.yaml"
-# Update cray-hms-capmc
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-capmc).version' 1.23.12
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-capmc).values.global.appVersion' 1.31.1
+# Update cray-hms-firmware-action and cray-bos
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-firmware-action).version' 2.1.6
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-firmware-action).values.global.appVersion' 1.24.1
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-bos).version' 2.0.16
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==cray-hms-bos).values.global.appVersion' 2.0.16
 
 # get all installed csm version into a file
 kubectl get cm -n services cray-product-catalog -o json | jq  -r '.data.csm' | yq r -  -d '*' -j | jq -r 'keys[]' > /tmp/csm_versions
