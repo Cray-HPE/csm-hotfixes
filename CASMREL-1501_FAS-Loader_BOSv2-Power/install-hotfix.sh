@@ -27,6 +27,38 @@ set -o errexit
 set -o pipefail
 set -o xtrace
 
+# Label for the hotfix Loftsman manifest
+HOTFIX_LABEL=casmrel-1501-fas-loader-bos-v2-hotfix
+
+# The following code is included so that this script can be used for future hotfixes and not accidentally use an invalid label.
+
+# This label is used for the manifest, and we append a 15 character timestamp string.
+# The result must adhere to K8s naming restrictions:
+# * Length <= 253 characters
+# * Legal characters: lowercase alphanumeric, -, .
+# * Start and end with alphanumeric
+#
+# Thus HOTFIX_LABEL must be <= 238 characters long, consist of the legal characters
+# above, and start with a lowercase alphanumeric.
+
+# Replace _ or whitespace with -
+HOTFIX_LABEL=${HOTFIX_LABEL//[_[:space:]]/-}
+# Strip any illegal characters
+HOTFIX_LABEL=${HOTFIX_LABEL//[^-.a-z0-9]/}
+# Strip illegal starting characters from front
+HOTFIX_LABEL=${HOTFIX_LABEL##[^a-z0-9]}
+# For readability, replace repeated - with a single -
+HOTFIX_LABEL=${HOTFIX_LABEL//+(-)/-}
+# And similarly for repeated .
+HOTFIX_LABEL=${HOTFIX_LABEL//+(.)/.}
+# And truncate to 238
+HOTFIX_LABEL=${HOTFIX_LABEL::238}
+# If after all of this it ends up being blank, then default to the generic "hotfix"
+[[ -n ${HOTFIX_LABEL} ]] || HOTFIX_LABEL=hotfix
+
+# Finally, append the timestamp
+HOTFIX_LABEL="${HOTFIX_LABEL}-$(date +%Y%m%d%H%M%S)"
+
 ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOTDIR}/lib/version.sh"
 
@@ -34,46 +66,37 @@ source "${ROOTDIR}/lib/version.sh"
 workdir="$(mktemp -d)"
 trap "rm -fr '${workdir}'" EXIT
 
-# Patch sysmgmt manifest
-kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/sysmgmt-orig.yaml"
-cp "${workdir}/sysmgmt-orig.yaml" "${workdir}/sysmgmt-new.yaml"
-# Update cray-hms-firmware-action and cray-bos
-yq w -i "${workdir}/sysmgmt-new.yaml" 'spec.charts.(name==cray-hms-firmware-action).version' 2.1.6
-yq w -i "${workdir}/sysmgmt-new.yaml" 'spec.charts.(name==cray-hms-firmware-action).values.global.appVersion' 1.24.1
-yq w -i "${workdir}/sysmgmt-new.yaml" 'spec.charts.(name==cray-bos).version' 2.0.16
-yq w -i "${workdir}/sysmgmt-new.yaml" 'spec.charts.(name==cray-bos).values.global.appVersion' 2.0.16
-
-# get all installed csm version into a file
-kubectl get cm -n services cray-product-catalog -o json | jq  -r '.data.csm' | yq r -  -d '*' -j | jq -r 'keys[]' > /tmp/csm_versions
-# sort -V: version sort
-highest_version=$(sort -V /tmp/csm_versions | tail -1)
-
-if [[ "$highest_version" == "1.0"*  ]];then
-    echo "patch 1.0 manifest"
-    yq w -i "${workdir}/sysmgmt-new.yaml"  'spec.sources.charts(name==csm).location' https://packages.local/repository/charts
-    yq w -i "${workdir}/sysmgmt-new.yaml"  'spec.sources.charts(name==csm).type' repo
-    yq w -i "${workdir}/sysmgmt-new.yaml"  'spec.sources.charts(name==csm-algol60).location' https://packages.local/repository/charts
-    yq w -i "${workdir}/sysmgmt-new.yaml"  'spec.sources.charts(name==csm-algol60).type' repo
-fi
-
-# convert to JSON for simpler Python-ing
-yq r -j "${workdir}/sysmgmt-new.yaml" > "${workdir}/sysmgmt-new.json"
-
-python3 -c "
-import json
-
-with open('${workdir}/sysmgmt-new.json', 'rt') as f:
-  manifest = json.load(f)
-
-chart_list = manifest['spec']['charts']
-manifest['spec']['charts'] = [ c for c in chart_list if c['name'] in { 'cray-hms-firmware-action', 'cray-bos' } ]
-
-with open('${workdir}/sysmgmt-new.json', 'wt') as f:
-  json.dump(manifest, f)
-"
-
-# convert back to YAML and lose the -new suffix
-yq r -P "${workdir}/sysmgmt-new.json" > "${workdir}/sysmgmt.yaml"
+# Create hotfix manifest
+manifest="${workdir}/manifest.yaml"
+cat <<EOF > "${manifest}"
+apiVersion: manifests/v1beta1
+metadata:
+  name: ${HOTFIX_LABEL}
+spec:
+  charts:
+    - name: cray-hms-firmware-action
+      namespace: services
+      source: csm-algol60
+      values:
+        nexus:
+          repo: shasta-firmware
+        global:
+          appVersion: 1.24.1
+      version: 2.1.6
+    - name: cray-bos
+      namespace: services
+      source: csm-algol60
+      timeout: 10m
+      version: 2.0.16
+      values:
+        global:
+          appVersion: 2.0.16
+  sources:
+    charts:
+      - location: https://packages.local/repository/charts
+        name: csm-algol60
+        type: repo
+EOF
 
 # Load artifacts into nexus
 ${ROOTDIR}/lib/setup-nexus.sh
@@ -85,8 +108,11 @@ function deploy() {
     done
 }
 
-# Redeploy sysmgmt
-deploy "${workdir}/sysmgmt.yaml"
+# Redeploy services
+deploy "${manifest}"
+
+# Clean up temporary directory
+rm -fr "${workdir}"
 
 set +x
 cat >&2 <<EOF
