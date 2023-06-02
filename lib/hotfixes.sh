@@ -256,5 +256,6 @@ EOF
     sed -i -e '1s/^/spec:\n  charts:\n    - /' -e '2,$s/^/      /' "${chart_files[@]}"
     
     # Merge them all into manifest.yaml
+    # --arrays=append will merge the "charts:" lists from the different chart files, instead of having them overrwrite each other
     yq m -i --arrays=append "${manifest_file}" "${chart_files[@]}"
 }
