@@ -27,76 +27,71 @@ set -o errexit
 set -o pipefail
 set -o xtrace
 
-# Label for the hotfix Loftsman manifest
-HOTFIX_LABEL=casmrel-1501-fas-loader-bos-v2-hotfix
-
-# The following code is included so that this script can be used for future hotfixes and not accidentally use an invalid label.
-
-# This label is used for the manifest, and we append a 15 character timestamp string.
-# The result must adhere to K8s naming restrictions:
-# * Length <= 253 characters
-# * Legal characters: lowercase alphanumeric, -, .
-# * Start and end with alphanumeric
-#
-# Thus HOTFIX_LABEL must be <= 238 characters long, consist of the legal characters
-# above, and start with a lowercase alphanumeric.
-
-# Replace _ or whitespace with -
-HOTFIX_LABEL=${HOTFIX_LABEL//[_[:space:]]/-}
-# Strip any illegal characters
-HOTFIX_LABEL=${HOTFIX_LABEL//[^-.a-z0-9]/}
-# Strip illegal starting characters from front
-HOTFIX_LABEL=${HOTFIX_LABEL##[^a-z0-9]}
-# For readability, replace repeated - with a single -
-HOTFIX_LABEL=${HOTFIX_LABEL//+(-)/-}
-# And similarly for repeated .
-HOTFIX_LABEL=${HOTFIX_LABEL//+(.)/.}
-# And truncate to 238
-HOTFIX_LABEL=${HOTFIX_LABEL::238}
-# If after all of this it ends up being blank, then default to the generic "hotfix"
-[[ -n ${HOTFIX_LABEL} ]] || HOTFIX_LABEL=hotfix
-
-# Finally, append the timestamp
-HOTFIX_LABEL="${HOTFIX_LABEL}-$(date +%Y%m%d%H%M%S)"
-
 ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOTDIR}/lib/version.sh"
+source "${ROOTDIR}/lib/hotfixes.sh"
+
+# Label for the hotfix Loftsman manifest
+HOTFIX_LABEL=$(make_hotfix_label casmrel-1501-fas-loader-bos-v2-hotfix)
+
+# Charts to deploy
+CHART_NAMES=( cray-bos cray-hms-firmware-action )
 
 # Create scratch space
 workdir="$(mktemp -d)"
 trap "rm -fr '${workdir}'" EXIT
 
-# Create hotfix manifest
-manifest="${workdir}/manifest.yaml"
-cat <<EOF > "${manifest}"
-apiVersion: manifests/v1beta1
-metadata:
-  name: ${HOTFIX_LABEL}
-spec:
-  charts:
-    - name: cray-hms-firmware-action
-      namespace: services
-      source: csm-algol60
-      values:
-        nexus:
-          repo: shasta-firmware
-        global:
-          appVersion: 1.24.1
-      version: 2.1.6
-    - name: cray-bos
-      namespace: services
-      source: csm-algol60
-      timeout: 10m
-      version: 2.0.16
-      values:
-        global:
-          appVersion: 2.0.16
-  sources:
-    charts:
-      - location: https://packages.local/repository/charts
-        name: csm-algol60
-        type: repo
+get_latest_charts
+
+# Update each chart manifest with the hotfix information, or create a default hotfix chart manifest if one was not found
+
+# cray-bos
+chart=cray-bos
+chart_file="${workdir}/${chart}.yaml"
+if [[ ! -e ${chart_file} ]]; then
+    # Create a default manifest for this chart
+    cat <<EOF > "${chart_file}"
+name: ${chart}
+namespace: services
+source: csm-algol60
+timeout: 10m
+version: 2.0.16
+values:
+  global:
+    appVersion: 2.0.16
 EOF
+else
+    # Update the manifest for the hotfix    
+    yq w -i "${chart_file}" 'version' 2.0.16
+    yq w -i "${chart_file}" 'values.global.appVersion' 2.0.16
+fi
+
+# cray-hms-firmware-action
+chart=cray-hms-firmware-action
+chart_file="${workdir}/${chart}.yaml"
+if [[ ! -e ${chart_file} ]]; then
+    # Create a default manifest for this chart
+    cat <<EOF > "${chart_file}"
+name: cray-hms-firmware-action
+namespace: services
+source: csm-algol60
+values:
+  nexus:
+    repo: shasta-firmware
+  global:
+    appVersion: 1.24.1
+version: 2.1.6
+EOF
+else
+    # Update the manifest for the hotfix
+    yq w -i "${chart_file}" 'version' 2.1.6
+    yq w -i "${chart_file}" 'values.global.appVersion' 1.24.1
+fi
+
+# Add individual chart files into manifest. Result is stored in $manifest_file variable
+merge_charts_into_manifest
+
+cat "${manifest_file}"
 
 # Load artifacts into nexus
 ${ROOTDIR}/lib/setup-nexus.sh
@@ -109,7 +104,7 @@ function deploy() {
 }
 
 # Redeploy services
-deploy "${manifest}"
+deploy  "${manifest_file}"
 
 # Clean up temporary directory
 rm -fr "${workdir}"
