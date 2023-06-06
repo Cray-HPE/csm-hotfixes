@@ -66,9 +66,9 @@ source "${ROOTDIR}/lib/version.sh"
 workdir="$(mktemp -d)"
 trap "rm -fr '${workdir}'" EXIT
 
-# Create hotfix manifest
-manifest="${workdir}/manifest.yaml"
-cat <<EOF > "${manifest}"
+# Create base hotfix manifest
+base_manifest="${workdir}/base_manifest.yaml"
+cat <<EOF > "${base_manifest}"
 apiVersion: manifests/v1beta1
 metadata:
   name: ${HOTFIX_LABEL}
@@ -98,8 +98,16 @@ spec:
         type: repo
 EOF
 
+# Download customizations.yaml
+customizations="${workdir}/customizations.yaml"
+kubectl get secrets -n loftsman site-init -o jsonpath='{.data.customizations\.yaml}' | base64 -d > "${customizations}"
+
+# Generate customized manifest
+manifest="${workdir}/manifest.yaml"
+manifestgen -c "${customizations}" -i "${base_manifest}" -o "${manifest}"
+
 # Load artifacts into nexus
-${ROOTDIR}/lib/setup-nexus.sh
+"${ROOTDIR}/lib/setup-nexus.sh"
 
 function deploy() {
     while [[ $# -gt 0 ]]; do
