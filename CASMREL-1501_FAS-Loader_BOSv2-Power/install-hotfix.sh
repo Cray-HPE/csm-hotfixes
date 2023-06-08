@@ -87,10 +87,10 @@ spec:
       namespace: services
       source: csm-algol60
       timeout: 10m
-      version: 2.0.16
+      version: 2.0.18
       values:
         global:
-          appVersion: 2.0.16
+          appVersion: 2.0.18
   sources:
     charts:
       - location: https://packages.local/repository/charts
