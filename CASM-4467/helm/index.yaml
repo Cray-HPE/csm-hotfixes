@@ -21,18 +21,9 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 #
-https://artifactory.algol60.net/artifactory/csm-helm-charts/:
+https://artifactory.algol60.net/artifactory/csm-helm-charts/stable:
   charts:
-  - name: cray-iuf
-    source: csm-algol60
-    version: 2.11.3
-    namespace: argo
-  - name: cray-nls
-    source: csm-algol60
-    version: 2.11.3
-    namespace: argo
-    swagger:
-      - name: nls
-        title: "NCN Lifecycle Service"
-        version: v1
-        url: https://raw.githubusercontent.com/Cray-HPE/cray-nls/v0.10.9/docs/NLS_swagger.yaml
+    cray-iuf:
+    - 2.11.3
+    cray-nls:
+    - 2.11.3
