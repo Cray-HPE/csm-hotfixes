@@ -117,7 +117,7 @@ pipeline {
 
   post {
     always {
-      archiveArtifacts artifacts: 'dist/**/*.*', fingerprint: true
+      archiveArtifacts artifacts: 'dist/*', fingerprint: true
     }
   }
 }
