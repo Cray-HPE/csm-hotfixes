@@ -76,6 +76,7 @@ pipeline {
           done < dist/build.txt
         '''
        }
+       archiveArtifacts artifacts: 'dist/*', fingerprint: true
       }
     }
 
@@ -112,12 +113,6 @@ pipeline {
           }
         }
       }
-    }
-  }
-
-  post {
-    always {
-      archiveArtifacts artifacts: 'dist/*', fingerprint: true
     }
   }
 }
