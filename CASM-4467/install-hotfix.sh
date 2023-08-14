@@ -62,7 +62,7 @@ echo ">>>>> The following is the loftsman manifest that will be shipped..."
 cat ${workdir}/platform.yaml
 
 echo ">>>>> Ship the loftsman manifest..."
-loftsman ship --charts-path https://packages.local/repository/charts --manifest-path ${workdir}/platform.yaml
+loftsman ship --charts-path ${ROOTDIR}/helm --manifest-path ${workdir}/platform.yaml
 
 set +x
 cat >&2 <<EOF
