@@ -1,34 +1,17 @@
 #!/usr/bin/env bash
-#
-# MIT License
-#
-# (C) Copyright 2020, 2022 Hewlett Packard Enterprise Development LP
-#
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the "Software"),
-# to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense,
-# and/or sell copies of the Software, and to permit persons to whom the
-# Software is furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-# OTHER DEALINGS IN THE SOFTWARE.
-#
+
+# Copyright 2023 Hewlett Packard Enterprise Development LP
+
 # Defaults
-# TODO grab these from customizations.yaml?
 : "${NEXUS_URL:="https://packages.local"}"
 : "${NEXUS_REGISTRY:="registry.local"}"
 
+export NEXUS_URL
+
 # Set ROOTDIR to reasonable default, assumes this script is in a subdir (e.g., lib)
 : "${ROOTDIR:="$(dirname "${BASH_SOURCE[0]}")/.."}"
+
+declare -a podman_run_flags=(--network host)
 
 # Prefer to use podman, but for environments with docker
 if [[ "${USE_DOCKER_NOT_PODMAN:-"no"}" == "yes" ]]; then
@@ -60,8 +43,16 @@ function load-vendor-image() {
     )
 }
 
-vendor_images=()
+declare -a vendor_images=()
 
+# usage: load-install-deps
+#
+# Loads vendored images into podman's image storage to facilitate installation.
+# Product install scripts should call this function before using any functions
+# which use CRAY_NEXUS_SETUP_IMAGE or SKOPEO_IMAGE to interact with Nexus.
+#
+# Product install scripts should call `clean-install-deps` when finished to
+# remove images loaded into podman.
 function load-install-deps() {
     # Load vendor images to support installation
     if [[ -f "${ROOTDIR}/vendor/cray-nexus-setup.tar" ]]; then
@@ -75,11 +66,62 @@ function load-install-deps() {
     fi
 }
 
+# usage: load-cfs-config-util
+#
+# Loads the vendored cfs-config-util container image TARFILE into podman's
+# image storage to facilitate updating CFS configurations.
+#
+# A script that uses the `cfs-config-util` functions in this file should call
+# this function first and should call `clean-install-deps` at the end to remove
+# images loaded into podman.
+function load-cfs-config-util() {
+    if [[ -f "${ROOTDIR}/vendor/cfs-config-util.tar" ]]; then
+        [[ -v CFS_CONFIG_UTIL_IMAGE ]] || CFS_CONFIG_UTIL_IMAGE="$(load-vendor-image "${ROOTDIR}/vendor/cfs-config-util.tar")" || return
+        vendor_images+=("$CFS_CONFIG_UTIL_IMAGE")
+    fi
+}
+
+# usage: clean-install-deps
+#
+# Removes images from podman's image storage which have been loaded by the
+# `load-install-deps` or `load-cfs-config-util` functions.
+#
+# Should be called at the end of product install scripts.
 function clean-install-deps() {
     # Clean images used to support installation
     for image in "${vendor_images[@]}"; do
         podman rmi -f "$image"
     done
+}
+
+# usage: nexus-get-credential [[-n NAMESPACE] SECRET]
+#
+# Gets Nexus username and password from SECRET in NAMESPACE and sets
+# NEXUS_USERNAME and NEXUS_PASSWORD as appropriate. By default NAMESPACE is
+# "nexus" and SECRET is "nexus-admin-credential".
+function nexus-get-credential() {
+    requires base64 kubectl
+
+    [[ $# -gt 0 ]] || set -- -n nexus nexus-admin-credential
+
+    kubectl get secret "${@}" >/dev/null || return $?
+
+    export NEXUS_USERNAME="$(kubectl get secret "${@}" -o jsonpath='{.data.username}' | base64 -d)"
+    export NEXUS_PASSWORD="$(kubectl get secret "${@}" -o jsonpath='{.data.password}' | base64 -d)"
+}
+
+# usage: nexus-setdefault-credential
+#
+# Ensures NEXUS_USERNAME and NEXUS_PASSWORD are set, at least to default
+# credential.
+function nexus-setdefault-credential() {
+    [[ -v NEXUS_PASSWORD && -n "$NEXUS_PASSWORD" ]] && return 0
+    if ! nexus-get-credential; then
+        echo >&2 "warning: Nexus admin credential not detected, falling back to defaults"
+        export NEXUS_USERNAME="admin"
+        export NEXUS_PASSWORD="admin123"
+    fi
+    return 0
 }
 
 # usage: nexus-setup (blobstores|repositories) CONFIG
@@ -97,10 +139,16 @@ function clean-install-deps() {
 #   CRAY_NEXUS_SETUP_IMAGE - Image containing Cray's Nexus setup tools;
 #       recommended to vendor with tag specific to a product version
 #
+# If the NEXUS_PASSWORD environment variable is not set, attempts to set
+# NEXUS_USERNAME and NEXUS_PASSWORD based on the nexus-admin-credential
+# Kubernetes secret. Otherwise, the default Nexus admin credentials are used.
 function nexus-setup() {
-    podman run --rm --network host \
+    nexus-setdefault-credential
+    podman run --rm "${podman_run_flags[@]}" \
         -v "$(realpath "$2"):/config.yaml:ro" \
-        -e "NEXUS_URL=${NEXUS_URL}" \
+        -e NEXUS_URL \
+        -e NEXUS_USERNAME \
+        -e NEXUS_PASSWORD \
         "$CRAY_NEXUS_SETUP_IMAGE" \
         "nexus-${1}-create" /config.yaml
 }
@@ -119,16 +167,17 @@ function nexus-setup() {
 #
 #   NEXUS_URL - Base Nexus URL; defaults to https://packages.local
 #
+# If the NEXUS_PASSWORD environment variable is not set, attempts to set
+# NEXUS_USERNAME and NEXUS_PASSWORD based on the nexus-admin-credential
+# Kubernetes secret. Otherwise, the default Nexus admin credentials are used.
 function nexus-wait-for-rpm-repomd() {
-    local reponame="$1"
-    local interval="${2:-5}"
-
-    echo >&2 "Waiting for Nexus to create repository metadata for ${reponame}..."
-    while ! curl -Isf "${NEXUS_URL}/repository/${reponame}/repodata/repomd.xml" ; do
-        echo >&2 "${reponame} repo metadata is not ready yet..."
-        sleep "$interval"
-    done
-    echo >&2 "OK - ${reponame} repo metadata exists"
+    nexus-setdefault-credential
+    podman run --rm "${podman_run_flags[@]}" \
+        -e NEXUS_URL \
+        -e NEXUS_USERNAME \
+        -e NEXUS_PASSWORD \
+        "$CRAY_NEXUS_SETUP_IMAGE" \
+        "nexus-wait-for-rpm-repomd" "${@}"
 }
 
 # usage: nexus-upload (helm|raw|yum) DIRECTORY REPOSITORY
@@ -145,6 +194,9 @@ function nexus-wait-for-rpm-repomd() {
 #   CRAY_NEXUS_SETUP_IMAGE - Image containing Cray's Nexus setup tools;
 #       recommended to vendor with tag specific to a product version
 #
+# If the NEXUS_PASSWORD environment variable is not set, attempts to set
+# NEXUS_USERNAME and NEXUS_PASSWORD based on the nexus-admin-credential
+# Kubernetes secret. Otherwise, the default Nexus admin credentials are used.
 function nexus-upload() {
     local repotype="$1"
     local src="$2"
@@ -152,9 +204,12 @@ function nexus-upload() {
 
     [[ -d "$src" ]] || return 0
 
-    podman run --rm --network host \
+    nexus-setdefault-credential
+    podman run --rm "${podman_run_flags[@]}" \
         -v "$(realpath "$src"):/data:ro" \
-        -e "NEXUS_URL=${NEXUS_URL}" \
+        -e NEXUS_URL \
+        -e NEXUS_USERNAME \
+        -e NEXUS_PASSWORD \
         "$CRAY_NEXUS_SETUP_IMAGE" \
         "nexus-upload-repo-${repotype}" "/data/" "$reponame"
 }
@@ -169,13 +224,130 @@ function nexus-upload() {
 #   SKOPEO_IMAGE - Image containing Skopeo tool; recommended to vendor with tag
 #       specific to a product version
 #
+# If the NEXUS_PASSWORD environment variable is not set, attempts to set
+# NEXUS_USERNAME and NEXUS_PASSWORD based on the nexus-admin-credential
+# Kubernetes secret. Otherwise, the default Nexus admin credentials are used.
 function skopeo-sync() {
     local src="$1"
 
-    find "$src" -mindepth 1 -maxdepth 1 -type d | while read path; do
-        podman run --rm --network host \
-            -v "$(realpath "$path"):/image:ro" \
-            "$SKOPEO_IMAGE" \
-            sync --scoped --src dir --dest docker --dest-tls-verify=false /image "${NEXUS_REGISTRY}" || return
-    done
+    [[ -d "$src" ]] || return 0
+
+    nexus-setdefault-credential
+    # Note: Have to default NEXUS_USERNAME below since
+    # nexus-setdefault-credential returns immediately if NEXUS_PASSWORD is set.
+    podman run --rm "${podman_run_flags[@]}" \
+        -v "$(realpath "$src"):/image:ro" \
+        "$SKOPEO_IMAGE" \
+        sync --scoped --src dir --dest docker \
+        --dest-creds "${NEXUS_USERNAME:-admin}:${NEXUS_PASSWORD}" \
+        --dest-tls-verify=false \
+        /image "$NEXUS_REGISTRY"
+}
+
+# usage: skopeo-copy SOURCE DESTINATION
+#
+# Uses skopeo copy to copy an image within the registry.
+#
+# Requires the following environment variables to be set:
+#
+#   NEXUS_REGISTRY - Hostname of Nexus registry; defaults to registry.local
+#   SKOPEO_IMAGE - Image containing Skopeo tool; recommended to vendor with tag
+#       specific to a product version
+#
+# If the NEXUS_PASSWORD environment variable is not set, attempts to set
+# NEXUS_USERNAME and NEXUS_PASSWORD based on the nexus-admin-credential
+# Kubernetes secret. Otherwise, the default Nexus admin credentials are used.
+function skopeo-copy() {
+    local src="$1"
+    local dest="$2"
+
+    if [[ -z "$src" || -z "$dest" ]]; then
+        echo >&2 "usage: skopeo-copy SOURCE DESTINATION"
+        return 1
+    fi
+
+    nexus-setdefault-credential
+    # Note: Have to default NEXUS_USERNAME below since
+    # nexus-setdefault-credential returns immediately if NEXUS_PASSWORD is set.
+    podman run --rm "${podman_run_flags[@]}" \
+        "$SKOPEO_IMAGE" \
+        copy \
+        --src-tls-verify=false \
+        --dest-tls-verify=false \
+        --src-creds "${NEXUS_USERNAME:-admin}:${NEXUS_PASSWORD}" \
+        --dest-creds "${NEXUS_USERNAME:-admin}:${NEXUS_PASSWORD}" \
+        "docker://${NEXUS_REGISTRY}/${src}" \
+        "docker://${NEXUS_REGISTRY}/${dest}"
+}
+
+# usage: cfs-config-util-options-help
+#
+# Outputs information about the passthrough options accepted by the
+# cfs-config-util container image. These are options which can be specified by
+# the admin calling the installation script in the product which are then
+# passed through directly to the cfs-config-util container entrypoint.
+#
+function cfs-config-util-options-help() {
+    podman run --rm --name cfs-config-util-options-help --entrypoint=passthrough-options-help \
+        "${CFS_CONFIG_UTIL_IMAGE}"
+}
+
+# usage: cfs-config-util-process-opts [options]
+#
+# Pre-processes the options being passed to cfs-config-util. This finds any
+# options which require local file access and determines the appropriate mount
+# options needed when calling `podman`. It also then modifies any file paths in
+# the cfs-config-util options to point at the locations where those files will
+# be mounted inside the container.
+#
+# Outputs a JSON object with the following keys:
+#
+#   mount_options:      A string containing the mount options that should be
+#                       passed to `podman`.
+#   translated_args:    The cfs-config-util options with any file paths
+#                       translated appropriately.
+#
+function cfs-config-util-process-opts() {
+    podman run --rm --name cfs-config-util-process-opts --entrypoint=process-file-options \
+        "${CFS_CONFIG_UTIL_IMAGE}" "$@"
+}
+
+# usage: cfs-config-util [options]
+#
+# Run the cfs-config-util container under podman. Run this function with `-h`
+# to see the full usage information for the options understood by this utility.
+#
+# All arguments passed to this function are passed through to the underlying
+# cfs-config-util container's main entry point.
+#
+# Returns:
+#   0 if successful
+#   1 if the call to cfs-config-util to update the CFS configurations failed
+#   2 if the options passed to cfs-config-util could not be parsed
+#
+function cfs-config-util() {
+    local err_temp_file="$(mktemp /tmp/cfs-config-util-process-opts-err-XXXXX)"
+    local out_temp_file="$(mktemp /tmp/cfs-config-util-process-opts-out-XXXXX)"
+    cfs-config-util-process-opts "$@" 1>"${out_temp_file}" 2>"${err_temp_file}"
+    local rc=$?
+
+    if [[ $rc -ne 0 ]]; then
+        # The name of the script calling this function is $0
+        local script_name="$(basename "$0")"
+        # Substitute the name of the script in the usage info error message
+        sed -e "s/process-file-options/${script_name}/" < $err_temp_file
+        rm $err_temp_file $out_temp_file
+        return 2
+    fi
+
+    local podman_cli_args="--mount type=bind,src=/etc/kubernetes/admin.conf,target=$HOME/.kube/config,ro=true"
+    podman_cli_args+=" --mount type=bind,src=/etc/pki/trust/anchors,target=/usr/local/share/ca-certificates,ro=true"
+    podman_cli_args+=" $(jq -r '.mount_opts' < "$out_temp_file")"
+
+    local translated_args="$(jq -r '.translated_args' < "$out_temp_file")"
+    rm $err_temp_file $out_temp_file
+
+    if ! podman run --rm --name cfs-config-util $podman_cli_args "${CFS_CONFIG_UTIL_IMAGE}" ${translated_args}; then
+        return 1
+    fi
 }

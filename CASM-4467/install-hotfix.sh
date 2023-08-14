@@ -34,7 +34,7 @@ source "${ROOTDIR}/lib/version.sh"
 
 # Create scratch space
 workdir="$(mktemp -d)"
-trap "rm -fr '${workdir}'"
+trap "rm -fr '${workdir}'" EXIT
 
 echo ">>>>> Loading artifacts into Nexus..."
 ${ROOTDIR}/lib/setup-nexus.sh
