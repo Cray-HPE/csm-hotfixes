@@ -1,0 +1,13 @@
+---
+cleanup: null
+type: hosted
+format: yum
+yum:
+  repodataDepth: 0
+  deployPolicy: STRICT
+name: casmtriage-5033-sle-15sp4
+online: true
+storage:
+  blobStoreName: default
+  strictContentTypeValidation: false
+  writePolicy: ALLOW_ONCE
