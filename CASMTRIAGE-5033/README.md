@@ -13,7 +13,7 @@ This procedure covers applying the hotfix for the QLogic kernel panics pertainin
 2. On that master node `untar` the tar and change into the CASMTIRAGE-5033 folder
 
    ```bash
-   cd CASMTRIAGE-5033-1.4.1
+   cd csm-1.4.1-qlogic-hotfix-1
    ```
 
 ## Execute the hotfix
