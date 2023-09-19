@@ -59,10 +59,50 @@ export PDSH_SSH_ARGS_APPEND="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/
 if ! pdsh -S -b -w "$(printf '%s,' "${NCNS[@]}")" '
 sle_version="sle-$(awk -F= '\''/VERSION=/{gsub(/["-]/, "") ; print tolower($NF)}'\'' /etc/os-release)"
 zypper --no-gpg-checks --plus-repo "https://packages.local/repository/casmtriage-5033-${sle_version}" in -y qlgc-fastlinq-kmp-default
+
+rm -f /squashfs/*
+/srv/cray/scripts/metal/create-kis-artifacts.sh kernel-initrd-only >/squashfs/build.log 2>/dev/build.error.log
+if ! mount -L BOOTRAID; then
+    echo "BOOTRAID already mounted"
+fi
+
+# Update the local disk bootloader.
+BOOTRAID="$(lsblk -o MOUNTPOINT -nr /dev/disk/by-label/BOOTRAID)"
+initrd_name="$(awk -F"/" "/initrdefi/{print \$NF}" "$BOOTRAID/boot/grub2/grub.cfg")"
+cp -pv /squashfs/initrd.img.xz "$BOOTRAID/boot/$initrd_name"
+cp -pv /squashfs/*.kernel "$BOOTRAID/boot/kernel"
 '; then
     echo >&2 'Failed to apply the patch on one or more nodes.'
     exit 1
 fi
+
+bucket=boot-images
+fixed_kernel_object=k8s/qlogic-update/kernel
+fixed_initrd_object=k8s/qlogic-update/initrd
+echo -n "Uploading new kernel from $(hostname) to s3://${bucket}/${fixed_kernel_object} ... "
+cray artifacts create "$bucket" "$fixed_kernel_object" /squashfs/*.kernel >/dev/null 2>&1
+echo 'Done'
+echo -n "Uploading new initrd from $(hostname) to s3://${bucket}/${fixed_initrd_object} ... "
+cray artifacts create "$bucket" "$fixed_initrd_object" /squashfs/initrd.img.xz >/dev/null 2>&1
+echo 'Done'
+if IFS=$'\n' read -rd '' -a NCN_XNAMES; then
+:
+fi <<< "$(cray hsm state components list --role Management --subrole Master --subrole Worker --type Node --format json | jq -r '.Components | map(.ID) | join("\n")')"
+mkdir -p /var/log/qlogic-hotfix/
+echo "Patching BSS bootparameters for [${#NCN_XNAMES[@]}] NCNs (masters and workers only)."
+for ncn_xname in "${NCN_XNAMES[@]}"; do
+    printf 'Patching BSS bootparameters %-16s ... ' "${ncn_xname}"
+    cray bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[]' >"/var/log/qlogic-hotfix/${ncn_xname}.bss.backup.json"
+    cray bss bootparameters update --hosts "${ncn_xname}" --kernel "s3://${bucket}/${fixed_kernel_object}" >/dev/null 2>&1
+    cray bss bootparameters update --hosts "${ncn_xname}" --initrd "s3://${bucket}/${fixed_initrd_object}" >/dev/null 2>&1
+    echo 'Done'
+done
+
+for ncn_xname in "${NCN_XNAMES[@]}"; do
+    echo "$ncn_xname"
+    cray bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[] | .initrd, .kernel'
+    echo "----------------"
+done
 
 echo "The following NCN masters and workers received the patch."
 printf "\t%s\n" "${NCNS[@]}"
