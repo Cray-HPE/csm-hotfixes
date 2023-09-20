@@ -72,37 +72,52 @@ initrd_name="$(awk -F"/" "/initrdefi/{print \$NF}" "$BOOTRAID/boot/grub2/grub.cf
 cp -pv /squashfs/initrd.img.xz "$BOOTRAID/boot/$initrd_name"
 cp -pv /squashfs/*.kernel "$BOOTRAID/boot/kernel"
 '; then
-    echo >&2 'Failed to apply the patch on one or more nodes.'
+    echo >&2 'Failed to apply the new driver, or at least update the disk bootloader with the patch on one or more nodes.'
     exit 1
 fi
 
-bucket=boot-images
-fixed_kernel_object=k8s/qlogic-update/kernel
-fixed_initrd_object=k8s/qlogic-update/initrd
+function update-bss() {
+    local ncn_xnames
+    local bucket=boot-images
+    local fixed_kernel_object=k8s/qlogic-update/kernel
+    local fixed_initrd_object=k8s/qlogic-update/initrd
+    ncn_xnames=( "$@" )
+    mkdir -p /var/log/qlogic-hotfix/
+    echo "Patching BSS bootparameters for [${#ncn_xnames[@]}] NCNs."
+    for ncn_xname in "${ncn_xnames[@]}"; do
+        printf 'Patching BSS bootparameters %-16s ... ' "${ncn_xname}"
+        echo "curl bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[]' >"/var/log/qlogic-hotfix/${ncn_xname}.bss.backup.json""
+        echo "curl bss bootparameters update --hosts "${ncn_xname}" --kernel "s3://${bucket}/${fixed_kernel_object}" >/dev/null 2>&1"
+        echo "curl bss bootparameters update --hosts "${ncn_xname}" --initrd "s3://${bucket}/${fixed_initrd_object}" >/dev/null 2>&1"
+        echo 'Done'
+    done
+
+    for ncn_xname in "${ncn_xnames[@]}"; do
+        echo "$ncn_xname"
+        echo "curl bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[] | .initrd, .kernel'"
+        echo "----------------"
+    done
+}
+
 echo -n "Uploading new kernel from $(hostname) to s3://${bucket}/${fixed_kernel_object} ... "
 cray artifacts create "$bucket" "$fixed_kernel_object" /squashfs/*.kernel >/dev/null 2>&1
 echo 'Done'
 echo -n "Uploading new initrd from $(hostname) to s3://${bucket}/${fixed_initrd_object} ... "
 cray artifacts create "$bucket" "$fixed_initrd_object" /squashfs/initrd.img.xz >/dev/null 2>&1
 echo 'Done'
+
+# CSM 1.4 craycli does not support multiple --subrole parameters, we have to go through masters and workers separately.
+# Masters.
 if IFS=$'\n' read -rd '' -a NCN_XNAMES; then
 :
-fi <<< "$(cray hsm state components list --role Management --subrole Master --subrole Worker --type Node --format json | jq -r '.Components | map(.ID) | join("\n")')"
-mkdir -p /var/log/qlogic-hotfix/
-echo "Patching BSS bootparameters for [${#NCN_XNAMES[@]}] NCNs (masters and workers only)."
-for ncn_xname in "${NCN_XNAMES[@]}"; do
-    printf 'Patching BSS bootparameters %-16s ... ' "${ncn_xname}"
-    cray bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[]' >"/var/log/qlogic-hotfix/${ncn_xname}.bss.backup.json"
-    cray bss bootparameters update --hosts "${ncn_xname}" --kernel "s3://${bucket}/${fixed_kernel_object}" >/dev/null 2>&1
-    cray bss bootparameters update --hosts "${ncn_xname}" --initrd "s3://${bucket}/${fixed_initrd_object}" >/dev/null 2>&1
-    echo 'Done'
-done
+fi <<< "$(cray hsm state components list --role Management --subrole Master --type Node --format json | jq -r '.Components | map(.ID) | join("\n")')"
+update-bss "${NCN_XNAMES[@]}"
 
-for ncn_xname in "${NCN_XNAMES[@]}"; do
-    echo "$ncn_xname"
-    cray bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[] | .initrd, .kernel'
-    echo "----------------"
-done
+# Workers.
+if IFS=$'\n' read -rd '' -a NCN_XNAMES; then
+:
+fi <<< "$(cray hsm state components list --role Management --subrole Worker --type Node --format json | jq -r '.Components | map(.ID) | join("\n")')"
+update-bss "${NCN_XNAMES[@]}"
 
 echo "The following NCN masters and workers received the patch."
 printf "\t%s\n" "${NCNS[@]}"
