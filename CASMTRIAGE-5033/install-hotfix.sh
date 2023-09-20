@@ -86,15 +86,15 @@ function update-bss() {
     echo "Patching BSS bootparameters for [${#ncn_xnames[@]}] NCNs."
     for ncn_xname in "${ncn_xnames[@]}"; do
         printf 'Patching BSS bootparameters %-16s ... ' "${ncn_xname}"
-        curl bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[]' >"/var/log/qlogic-hotfix/${ncn_xname}.bss.backup.json"
-        curl bss bootparameters update --hosts "${ncn_xname}" --kernel "s3://${bucket}/${fixed_kernel_object}" >/dev/null 2>&1
-        curl bss bootparameters update --hosts "${ncn_xname}" --initrd "s3://${bucket}/${fixed_initrd_object}" >/dev/null 2>&1
+        cray bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[]' >"/var/log/qlogic-hotfix/${ncn_xname}.bss.backup.json"
+        cray bss bootparameters update --hosts "${ncn_xname}" --kernel "s3://${bucket}/${fixed_kernel_object}" >/dev/null 2>&1
+        cray bss bootparameters update --hosts "${ncn_xname}" --initrd "s3://${bucket}/${fixed_initrd_object}" >/dev/null 2>&1
         echo 'Done'
     done
 
     for ncn_xname in "${ncn_xnames[@]}"; do
         echo "$ncn_xname"
-        curl bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[] | .initrd, .kernel'
+        cray bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[] | .initrd, .kernel'
         echo "----------------"
     done
 }
