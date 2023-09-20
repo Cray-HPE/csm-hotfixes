@@ -22,10 +22,6 @@
 #  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #  OTHER DEALINGS IN THE SOFTWARE.
 #
-set -eu
-set -o errexit
-set -o pipefail
-set -o xtrace
 
 ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOTDIR}/lib/version.sh"
@@ -33,6 +29,10 @@ source "${ROOTDIR}/lib/version.sh"
 # Load artifacts into nexus
 "${ROOTDIR}/lib/setup-nexus.sh"
 
+set -eu
+set -o errexit
+set -o pipefail
+set -o xtrace
 if [ -f /etc/pit-release ]; then
     echo >&2 'Can not run this hotfix on the PIT node'
     exit 1
