@@ -22,10 +22,6 @@
 #  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #  OTHER DEALINGS IN THE SOFTWARE.
 #
-set -eu
-set -o errexit
-set -o pipefail
-set -o xtrace
 
 ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOTDIR}/lib/version.sh"
@@ -33,6 +29,10 @@ source "${ROOTDIR}/lib/version.sh"
 # Load artifacts into nexus
 "${ROOTDIR}/lib/setup-nexus.sh"
 
+set -eu
+set -o errexit
+set -o pipefail
+set -o xtrace
 if [ -f /etc/pit-release ]; then
     echo >&2 'Can not run this hotfix on the PIT node'
     exit 1
@@ -43,44 +43,48 @@ else
         exit 1
     fi
 fi
+if [ "$1" != 'upload-only' ]; then
 
-export NCNS=()
-for ncn in "${EXPECTED_NCNS[@]}"; do
-    if ping -c 1 "$ncn" >/dev/null 2>&1 ; then
-        NCNS+=( "$ncn" )
-    else
-        echo >&2 "Failed to ping [$ncn]; skipping hotfix for [$ncn]"
+    export NCNS=()
+    for ncn in "${EXPECTED_NCNS[@]}"; do
+        if ping -c 1 "$ncn" >/dev/null 2>&1 ; then
+            NCNS+=( "$ncn" )
+        else
+            echo >&2 "Failed to ping [$ncn]; skipping hotfix for [$ncn]"
+        fi
+    done
+
+    echo "Applying the qlogic driver patch to [${#NCNS[@]}] NCNs (workers and masters only) ... "
+
+    export PDSH_SSH_ARGS_APPEND="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    if ! pdsh -S -b -w "$(printf '%s,' "${NCNS[@]}")" '
+    sle_version="sle-$(awk -F= '\''/VERSION=/{gsub(/["-]/, "") ; print tolower($NF)}'\'' /etc/os-release)"
+    zypper --no-gpg-checks --plus-repo "https://packages.local/repository/casmtriage-5033-${sle_version}" in -y qlgc-fastlinq-kmp-default
+
+    rm -f /squashfs/*
+    echo -n "Generating new initrd ... "
+    /srv/cray/scripts/metal/create-kis-artifacts.sh kernel-initrd-only >/squashfs/build.log 2>/dev/build.error.log
+    echo "Done"
+    if ! mount -L BOOTRAID 2>/dev/null; then
+        echo "BOOTRAID already mounted"
     fi
-done
 
-echo "Applying the qlogic driver patch to [${#NCNS[@]}] NCNs (workers and masters only) ... "
-
-export PDSH_SSH_ARGS_APPEND="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-if ! pdsh -S -b -w "$(printf '%s,' "${NCNS[@]}")" '
-sle_version="sle-$(awk -F= '\''/VERSION=/{gsub(/["-]/, "") ; print tolower($NF)}'\'' /etc/os-release)"
-zypper --no-gpg-checks --plus-repo "https://packages.local/repository/casmtriage-5033-${sle_version}" in -y qlgc-fastlinq-kmp-default
-
-rm -f /squashfs/*
-/srv/cray/scripts/metal/create-kis-artifacts.sh kernel-initrd-only >/squashfs/build.log 2>/dev/build.error.log
-if ! mount -L BOOTRAID; then
-    echo "BOOTRAID already mounted"
+    # Update the local disk bootloader.
+    BOOTRAID="$(lsblk -o MOUNTPOINT -nr /dev/disk/by-label/BOOTRAID)"
+    initrd_name="$(awk -F"/" "/initrdefi/{print \$NF}" "$BOOTRAID/boot/grub2/grub.cfg")"
+    cp -pv /squashfs/initrd.img.xz "$BOOTRAID/boot/$initrd_name"
+    cp -pv /squashfs/*.kernel "$BOOTRAID/boot/kernel"
+    '; then
+        echo >&2 'Failed to apply the new driver, or at least update the disk bootloader with the patch on one or more nodes.'
+        exit 1
+    fi
 fi
 
-# Update the local disk bootloader.
-BOOTRAID="$(lsblk -o MOUNTPOINT -nr /dev/disk/by-label/BOOTRAID)"
-initrd_name="$(awk -F"/" "/initrdefi/{print \$NF}" "$BOOTRAID/boot/grub2/grub.cfg")"
-cp -pv /squashfs/initrd.img.xz "$BOOTRAID/boot/$initrd_name"
-cp -pv /squashfs/*.kernel "$BOOTRAID/boot/kernel"
-'; then
-    echo >&2 'Failed to apply the new driver, or at least update the disk bootloader with the patch on one or more nodes.'
-    exit 1
-fi
-
+bucket=boot-images
+fixed_kernel_object=k8s/qlogic-update/kernel
+fixed_initrd_object=k8s/qlogic-update/initrd
 function update-bss() {
     local ncn_xnames
-    local bucket=boot-images
-    local fixed_kernel_object=k8s/qlogic-update/kernel
-    local fixed_initrd_object=k8s/qlogic-update/initrd
     ncn_xnames=( "$@" )
     mkdir -p /var/log/qlogic-hotfix/
     echo "Patching BSS bootparameters for [${#ncn_xnames[@]}] NCNs."
@@ -99,12 +103,25 @@ function update-bss() {
     done
 }
 
+upload_error=0
 echo -n "Uploading new kernel from $(hostname) to s3://${bucket}/${fixed_kernel_object} ... "
-cray artifacts create "$bucket" "$fixed_kernel_object" /squashfs/*.kernel >/dev/null 2>&1
-echo 'Done'
+if ! cray artifacts create "$bucket" "$fixed_kernel_object" /squashfs/*.kernel >/dev/null 2>&1; then
+    upload_error=1
+    echo >&2 'Failed!'
+else
+    echo 'Done'
+fi
 echo -n "Uploading new initrd from $(hostname) to s3://${bucket}/${fixed_initrd_object} ... "
-cray artifacts create "$bucket" "$fixed_initrd_object" /squashfs/initrd.img.xz >/dev/null 2>&1
-echo 'Done'
+if ! cray artifacts create "$bucket" "$fixed_initrd_object" /squashfs/initrd.img.xz >/dev/null 2>&1; then
+    upload_error=1
+    echo >&2 'Failed!'
+else
+    echo 'Done'
+fi
+if [ "$upload_error" -ne 0 ]; then
+    echo >&2 'CrayCLI failed to upload artifacts. Please verify craycli is authenticated, and then re-run this script as "./install-hotfix.sh upload-only" to resume at the failed step.'
+    exit 1
+fi
 
 # CSM 1.4 craycli does not support multiple --subrole parameters, we have to go through masters and workers separately.
 # Masters.
