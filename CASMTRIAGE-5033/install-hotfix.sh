@@ -76,11 +76,11 @@ cp -pv /squashfs/*.kernel "$BOOTRAID/boot/kernel"
     exit 1
 fi
 
+bucket=boot-images
+fixed_kernel_object=k8s/qlogic-update/kernel
+fixed_initrd_object=k8s/qlogic-update/initrd
 function update-bss() {
     local ncn_xnames
-    local bucket=boot-images
-    local fixed_kernel_object=k8s/qlogic-update/kernel
-    local fixed_initrd_object=k8s/qlogic-update/initrd
     ncn_xnames=( "$@" )
     mkdir -p /var/log/qlogic-hotfix/
     echo "Patching BSS bootparameters for [${#ncn_xnames[@]}] NCNs."
