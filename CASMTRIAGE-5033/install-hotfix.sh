@@ -43,7 +43,7 @@ else
         exit 1
     fi
 fi
-if [ "$1" != 'upload-only' ]; then
+if [ "${1:-}" != 'upload-only' ]; then
 
     export NCNS=()
     for ncn in "${EXPECTED_NCNS[@]}"; do
