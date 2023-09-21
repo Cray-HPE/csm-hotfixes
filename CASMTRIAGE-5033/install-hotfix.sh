@@ -22,13 +22,19 @@
 #  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #  OTHER DEALINGS IN THE SOFTWARE.
 #
+LOG_DIR=/var/log/qlogic-hotfix
+CURRENT_LOG_DIR="${LOG_DIR}/$(date '+%Y-%m-%d_%H:%M:%S')"
+mkdir -p "${CURRENT_LOG_DIR}"
+exec 19>"${CURRENT_LOG_DIR}/patch.xtrace"
+export BASH_XTRACEFD="19"
 
-ROOTDIR="$(dirname "${BASH_SOURCE[0]}")"
-source "${ROOTDIR}/lib/version.sh"
+ROOT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+source "${ROOT_DIR}/lib/version.sh"
 
 # Load artifacts into nexus
-"${ROOTDIR}/lib/setup-nexus.sh"
+"${ROOT_DIR}/lib/setup-nexus.sh"
 
+trap 'echo "See ${CURRENT_LOG_DIR}/patch.xtrace for debug output."' ERR INT
 set -eu
 set -o errexit
 set -o pipefail
@@ -62,8 +68,16 @@ if [ "${1:-}" != 'upload-only' ]; then
     zypper --no-gpg-checks --plus-repo "https://packages.local/repository/casmtriage-5033-${sle_version}" in -y qlgc-fastlinq-kmp-default
 
     rm -f /squashfs/*
+
+    # Comment out the kdump removal, you never know when the system will crash in general and we may need it to exist in this small amount of time.
+    sed -i -E "s:(rm -f /boot/initrd-\*-kdump):#\1:" /srv/cray/scripts/common/create-ims-initrd.sh
+
     echo -n "Generating new initrd ... "
-    /srv/cray/scripts/metal/create-kis-artifacts.sh kernel-initrd-only >/squashfs/build.log 2>/dev/build.error.log
+    /srv/cray/scripts/common/create-ims-initrd.sh >/squashfs/build.log 2>/dev/build.error.log
+
+    # Restore the script back to its original, intended state.
+    cp /run/rootfsbase/srv/cray/scripts/common/create-ims-initrd.sh /srv/cray/scripts/common/create-ims-initrd.sh
+
     echo "Done"
     if ! mount -L BOOTRAID 2>/dev/null; then
         echo "BOOTRAID already mounted"
@@ -86,18 +100,27 @@ fixed_initrd_object=k8s/qlogic-update/initrd
 function update-bss() {
     local ncn_xnames
     ncn_xnames=( "$@" )
-    mkdir -p /var/log/qlogic-hotfix/
+    mkdir -p "${CURRENT_LOG_DIR}"
     echo "Patching BSS bootparameters for [${#ncn_xnames[@]}] NCNs."
+
     for ncn_xname in "${ncn_xnames[@]}"; do
-        printf 'Patching BSS bootparameters %-16s ... ' "${ncn_xname}"
-        cray bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[]' >"/var/log/qlogic-hotfix/${ncn_xname}.bss.backup.json"
+        printf '%-16s Current kernel and initrd settings:\n' "$ncn_xname"
+        cray bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[] | .initrd, .kernel'
+        echo "----------------"
+    done
+
+    for ncn_xname in "${ncn_xnames[@]}"; do
+        printf "%-16s - Backing up BSS bootparameters to %s/%s.bss.backup.json ... " "${ncn_xname}" "${CURRENT_LOG_DIR}" "${ncn_xname}"
+        cray bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[]' >"${CURRENT_LOG_DIR}/${ncn_xname}.bss.backup.json"
+        echo 'Done'
+        printf '%-16s - Patching BSS bootparameters ... ' "${ncn_xname}"
         cray bss bootparameters update --hosts "${ncn_xname}" --kernel "s3://${bucket}/${fixed_kernel_object}" >/dev/null 2>&1
         cray bss bootparameters update --hosts "${ncn_xname}" --initrd "s3://${bucket}/${fixed_initrd_object}" >/dev/null 2>&1
         echo 'Done'
     done
 
     for ncn_xname in "${ncn_xnames[@]}"; do
-        echo "$ncn_xname"
+        printf '%-16s New kernel and initrd settings:\n' "$ncn_xname"
         cray bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[] | .initrd, .kernel'
         echo "----------------"
     done
@@ -105,14 +128,14 @@ function update-bss() {
 
 upload_error=0
 echo -n "Uploading new kernel from $(hostname) to s3://${bucket}/${fixed_kernel_object} ... "
-if ! cray artifacts create "$bucket" "$fixed_kernel_object" /squashfs/*.kernel >/dev/null 2>&1; then
+if ! cray artifacts create "$bucket" "$fixed_kernel_object" /squashfs/*.kernel >"${CURRENT_LOG_DIR}/kernel.upload.log" 2>&1 ; then
     upload_error=1
     echo >&2 'Failed!'
 else
     echo 'Done'
 fi
 echo -n "Uploading new initrd from $(hostname) to s3://${bucket}/${fixed_initrd_object} ... "
-if ! cray artifacts create "$bucket" "$fixed_initrd_object" /squashfs/initrd.img.xz >/dev/null 2>&1; then
+if ! cray artifacts create "$bucket" "$fixed_initrd_object" /squashfs/initrd.img.xz >"${CURRENT_LOG_DIR}/initrd.upload.log" 2>&1 ; then
     upload_error=1
     echo >&2 'Failed!'
 else
@@ -120,6 +143,7 @@ else
 fi
 if [ "$upload_error" -ne 0 ]; then
     echo >&2 'CrayCLI failed to upload artifacts. Please verify craycli is authenticated, and then re-run this script as "./install-hotfix.sh upload-only" to resume at the failed step.'
+    echo >&2 "For insight into the failure, see CrayCLI upload logs at ${CURRENT_LOG_DIR}/{kernel,initrd}.upload.log"
     exit 1
 fi
 
