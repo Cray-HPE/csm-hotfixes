@@ -5,7 +5,8 @@ format: yum
 yum:
   repodataDepth: 0
   deployPolicy: STRICT
-name: casmtriage-5033-sle-15sp4
+  writePolicy: ALLOW_ONCE
+name: qlogic-hotfix-sle-15sp4
 online: true
 storage:
   blobStoreName: default

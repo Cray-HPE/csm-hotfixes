@@ -1,3 +1,15 @@
 https://artifactory.algol60.net/artifactory/csm-rpms/hpe/stable/sle-15sp4:
   rpms:
     - qlgc-fastlinq-kmp-default-8.72.4.1_k5.14.21_150400.22-1.sles15sp4.x86_64
+https://artifactory.algol60.net/artifactory/suse-external/PTF.1215587/15-SP4/x86_64/:
+  rpms:
+    - kernel-default-debuginfo-5.14.21-150400.24.92.1.27088.1.PTF.1215587.x86_64.rpm
+    - kernel-default-debugsource-5.14.21-150400.24.92.1.27088.1.PTF.1215587.x86_64.rpm
+    - kernel-default-5.14.21-150400.24.92.1.27088.1.PTF.1215587.x86_64
+    - kernel-default-devel-5.14.21-150400.24.92.1.27088.1.PTF.1215587.x86_64
+    - kernel-devel-5.14.21-150400.24.92.1.27088.1.PTF.1215587.noarch
+    - kernel-macros-5.14.21-150400.24.92.1.27088.1.PTF.1215587.noarch
+    - kernel-syms-5.14.21-150400.24.92.1.27088.1.PTF.1215587.x86_64
+https://artifactory.algol60.net/artifactory/hpe-mirror-spp/SLES15/x86_64/current:
+  rpms:
+    - firmware-nic-is-marvell-flq-1.10.8-1.1.x86_64

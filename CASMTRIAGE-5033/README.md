@@ -1,29 +1,49 @@
-# CASMTRIAGE-5033
+# QLogic Hotfix (15-SP4)
+
+* [Setup](#setup)
+* [Execute the Hotfix](#execute-the-hotfix)
+* [Logs](#logs)
+    * [Restoring BSS Bootparameters](#restoring-bss-bootparameters)
+* [Installing Debug Symbols](#installing-debug-symbols)
 
 This procedure covers applying the hotfix for the QLogic kernel panics pertaining to:
 
 - Marvell 2P 25GbE SFP28 QL41232HQCU-HC OCP3 Adapter
 - Marvell FastLinQ 41000 Series - 2P 25GbE SFP28 QL41232HLCU-HC MD2 Adapter
 
-## Prerequisites
+> ***NOTE*** This hotfix will skip nodes that do NOT run SLE-15-SP4, for example in CSM 1.4.X storage NCNs will be skipped
+> as these run SLE-15-SP3.
+
+The hotfix includes:
+
+- Applying new kernel module options to the `qede` module
+- Installing a PTF Kernel from SUSE and Marvell
+- **Removing** the previous Kernel packages (this can not be undone)
+- Installing an updated set of kernel modules for the QLogic Fastlinq MD2/OCP cards
+- Updating the initrd on the local disk bootloader and in S3, as well as adjusting BSS to use the new set of artifacts
+
+> ***NOTE*** This patch can not be rolled back. If a rollback of the node(s) targeted by this patch is desired, their
+> BSS boot parameters need to be restored, and the node needs to be rebuilt.
+> Backups of the original BSS boot parameters will exist in `/var/log/qlogic-hotfix/<date>/`. See [restoring BSS bootparameters](#restoring-bss-bootparameters).
 
 ## Setup
 
 1. Copy the tar to a master node.
-2. On that master node `untar` the tar and change into the CASMTIRAGE-5033 folder
+2. On that master node `untar` the tar and change into the hotfix folder
 
    ```bash
-   cd csm-1.4.1-qlogic-hotfix-1
+   cd csm-qlogic-hotfix-sle-15sp4-*
    ```
 
 ## Execute the hotfix
 
-This hotfix is applied by applying the following script:
+This hotfix is applied by applying the following script, run `-h` to view the NCN selection options:
 
 ```bash
-./install-hotfix.sh
+./install-hotfix.sh -h
 ```
 
+Re-run the script with no arguments for the default NCN selection, or with one of the printed choices.
 After the script exits successfully, each node the script listed will need to reboot for the patch to take effect.
 
 Please reboot these at your leisure.
@@ -39,8 +59,7 @@ See `/var/log/qlogic-hotfix/<date>/` for:
 - `patch.xtrace` : Debug output (`set -x`) from the script
 - `$NCN_XNAME.bss.backup.json` : The BSS boot parameters from before the script modified them.
 
-### Restoring BSS boot parameters.
-
+### Restoring BSS bootparameters.
 
 1. Change into a desired `/var/log/qlogic-hotfix/<data>` directory.
 1. Run the following:
@@ -55,3 +74,12 @@ See `/var/log/qlogic-hotfix/<date>/` for:
         https://api-gw-service-nmn.local/apis/bss/boot/v1/bootparameters \
         --data @./$XNAME.bss.backup.json
     ```
+
+## Installing Debug Symbols
+
+This hotfix includes the `kernel-default-debuginfo` package in its Nexus repository.
+
+The debug symbols for the new Kernel version can be installed on the running node by calling the`install-debuginfo.sh`
+script.
+
+Otherwise, the RPM itself is located in this extracted tar ball in `rpm/x86_64/` for local installs.

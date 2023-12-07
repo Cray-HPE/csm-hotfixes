@@ -22,22 +22,25 @@
 #  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #  OTHER DEALINGS IN THE SOFTWARE.
 #
-set -eo pipefail
+KVER=5.14.21-150400.24.92.1.27088.1.PTF.1215587
+function usage {
+cat << EOF
+Installs debuginfo for "$KVER"
+usage:
 
-ROOTDIR="$(dirname "${BASH_SOURCE[0]}")/.."
-source "${ROOTDIR}/lib/install.sh"
+./install-debuginfo.sh
 
-load-install-deps
-
-# Upload assets to existing repositories
-nexus-setup repositories "${ROOTDIR}/nexus-repositories.yaml"
-nexus-upload yum "${ROOTDIR}/rpm/" qlogic-hotfix-sle-15sp4
-nexus-wait-for-rpm-repomd qlogic-hotfix-sle-15sp4
-
-clean-install-deps
-
-set +x
-cat >&2 <<EOF
-+ Nexus setup complete
-setup-nexus.sh: OK
 EOF
+}
+while getopts ":" o; do
+    case "${o}" in
+        *)
+            usage
+            exit 0
+            ;;
+    esac
+done
+
+# MUST USE SINGLE QUOTES, or hardcode sp4 into the path.
+zypper --no-gpg-checks --plus-repo 'https://packages.local/repository/qlogic-hotfix-sle-${releasever_major}sp${releasever_minor}' in -y kernel-default-debuginfo="$KVER"
+
