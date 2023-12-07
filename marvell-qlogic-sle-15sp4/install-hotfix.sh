@@ -174,6 +174,7 @@ if [ $upload_initrd_only -eq 0 ]; then
 
     # Restore the script back to its original, intended state.
     cp /run/rootfsbase/srv/cray/scripts/common/create-ims-initrd.sh /srv/cray/scripts/common/create-ims-initrd.sh
+    cp /run/rootfsbase/srv/cray/scripts/common/dracut-lib.sh /srv/cray/scripts/common/dracut-lib.sh
 
     echo "Done"
     if ! mount -L BOOTRAID 2>/dev/null; then
@@ -192,10 +193,19 @@ if [ $upload_initrd_only -eq 0 ]; then
 fi
 
 bucket=boot-images
-fixed_kernel_object=k8s/qlogic-update/kernel
-fixed_initrd_object=k8s/qlogic-update/initrd
+fixed_kernel_object_k8s=k8s/qlogic-update/kernel
+fixed_initrd_object_k8s=k8s/qlogic-update/initrd
+
+fixed_kernel_object_ceph=ceph/qlogic-update/kernel
+fixed_initrd_object_ceph=ceph/qlogic-update/initrd
 function update-bss() {
+    local kernel
+    local initrd
     local ncn_xnames
+    kernel="${1}"
+    shift
+    initrd="${1}"
+    shift
     ncn_xnames=( "$@" )
     mkdir -p "${CURRENT_LOG_DIR}"
     echo "Patching BSS bootparameters for [${#ncn_xnames[@]}] NCNs."
@@ -211,8 +221,8 @@ function update-bss() {
         cray bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[]' >"${CURRENT_LOG_DIR}/${ncn_xname}.bss.backup.json"
         echo 'Done'
         printf '%-16s - Patching BSS bootparameters ... ' "${ncn_xname}"
-        cray bss bootparameters update --hosts "${ncn_xname}" --kernel "s3://${bucket}/${fixed_kernel_object}" >/dev/null 2>&1
-        cray bss bootparameters update --hosts "${ncn_xname}" --initrd "s3://${bucket}/${fixed_initrd_object}" >/dev/null 2>&1
+        cray bss bootparameters update --hosts "${ncn_xname}" --kernel "s3://${bucket}/${kernel}" >/dev/null 2>&1
+        cray bss bootparameters update --hosts "${ncn_xname}" --initrd "s3://${bucket}/${initrd}" >/dev/null 2>&1
         echo 'Done'
     done
 
@@ -224,36 +234,79 @@ function update-bss() {
 }
 
 upload_error=0
-TEMP="$(mktemp -d)"
-rsync -rltDv "${NCNS[0]}:/squashfs/" "${TEMP}/"
-echo -n "Uploading new kernel from ${NCNS[0]} to s3://${bucket}/${fixed_kernel_object} ... "
-if ! cray artifacts create "$bucket" "$fixed_kernel_object" "${TEMP}/"*.kernel >"${CURRENT_LOG_DIR}/kernel.upload.log" 2>&1 ; then
-    upload_error=1
-    echo >&2 'Failed!'
-else
-    echo 'Done'
+if [ "$masters" -eq 1 ] || [ "$workers" -eq 1 ]; then
+    TEMP="$(mktemp -d)"
+    target_ncn=''
+    for ncn in "${NCNS[@]}"; do
+        if [[ "$ncn" =~ ^ncn-[wm] ]]; then
+            target_ncn="$ncn"
+            break
+        fi
+    done
+    rsync -rltDv "${target_ncn}:/squashfs/" "${TEMP}/"
+    echo -n "Uploading new kernel from $target_ncn to s3://${bucket}/${fixed_kernel_object_k8s} ... "
+    if ! cray artifacts create "$bucket" "$fixed_kernel_object_k8s" "${TEMP}/"*.kernel >"${CURRENT_LOG_DIR}/kernel.upload.log" 2>&1 ; then
+        upload_error=1
+        echo >&2 'Failed!'
+    else
+        echo 'Done'
+    fi
+    echo -n "Uploading new initrd from $target_ncn to s3://${bucket}/${fixed_initrd_object_k8s} ... "
+    if ! cray artifacts create "$bucket" "$fixed_initrd_object_k8s" "$TEMP/initrd.img.xz" >"${CURRENT_LOG_DIR}/initrd.upload.log" 2>&1 ; then
+        upload_error=1
+        echo >&2 'Failed!'
+    else
+        echo 'Done'
+    fi
+    rm -rf "${TEMP}"
+    if [ "$upload_error" -ne 0 ]; then
+        echo >&2 'CrayCLI failed to upload artifacts. Please verify craycli is authenticated, and then re-run this script as "./install-hotfix.sh upload-only" to resume at the failed step.'
+        echo >&2 "For insight into the failure, see CrayCLI upload logs at ${CURRENT_LOG_DIR}/{kernel,initrd}.upload.log"
+        exit 1
+    fi
 fi
-echo -n "Uploading new initrd from ${NCNS[0]} to s3://${bucket}/${fixed_initrd_object} ... "
-if ! cray artifacts create "$bucket" "$fixed_initrd_object" "$TEMP/initrd.img.xz" >"${CURRENT_LOG_DIR}/initrd.upload.log" 2>&1 ; then
-    upload_error=1
-    echo >&2 'Failed!'
-else
-    echo 'Done'
+if [ "$storage" -eq 1 ]; then
+    TEMP="$(mktemp -d)"
+    target_ncn=''
+    for ncn in "${NCNS[@]}"; do
+        if [[ "$ncn" =~ ^ncn-s ]]; then
+            target_ncn="$ncn"
+            break
+        fi
+    done
+    if [ "$target_ncn" = '' ]; then
+        echo >&2 'No storage NCN available.'
+        exit 1
+    fi
+    rsync -rltDv "${target_ncn}:/squashfs/" "${TEMP}/"
+    echo -n "Uploading new kernel from $target_ncn to s3://${bucket}/${fixed_kernel_object_ceph} ... "
+    if ! cray artifacts create "$bucket" "$fixed_kernel_object_ceph" "${TEMP}/"*.kernel >"${CURRENT_LOG_DIR}/kernel.upload.log" 2>&1 ; then
+        upload_error=1
+        echo >&2 'Failed!'
+    else
+        echo 'Done'
+    fi
+    echo -n "Uploading new initrd from $target_ncn to s3://${bucket}/${fixed_initrd_object_ceph} ... "
+    if ! cray artifacts create "$bucket" "$fixed_initrd_object_ceph" "$TEMP/initrd.img.xz" >"${CURRENT_LOG_DIR}/initrd.upload.log" 2>&1 ; then
+        upload_error=1
+        echo >&2 'Failed!'
+    else
+        echo 'Done'
+    fi
+    rm -rf "${TEMP}"
+    if [ "$upload_error" -ne 0 ]; then
+        echo >&2 'CrayCLI failed to upload artifacts. Please verify craycli is authenticated, and then re-run this script as "./install-hotfix.sh upload-only" to resume at the failed step.'
+        echo >&2 "For insight into the failure, see CrayCLI upload logs at ${CURRENT_LOG_DIR}/{kernel,initrd}.upload.log"
+        exit 1
+    fi
 fi
-rm -rf "${TEMP}"
-if [ "$upload_error" -ne 0 ]; then
-    echo >&2 'CrayCLI failed to upload artifacts. Please verify craycli is authenticated, and then re-run this script as "./install-hotfix.sh upload-only" to resume at the failed step.'
-    echo >&2 "For insight into the failure, see CrayCLI upload logs at ${CURRENT_LOG_DIR}/{kernel,initrd}.upload.log"
-    exit 1
-fi
-
 # CSM 1.4 craycli does not support multiple --subrole parameters, we have to go through each NCN one-by-one.
 # Masters.
 if [ "$masters" -eq 1 ]; then
     if IFS=$'\n' read -rd '' -a NCN_XNAMES; then
     :
     fi <<< "$(cray hsm state components list --role Management --subrole Master --type Node --format json | jq -r '.Components | map(.ID) | join("\n")')"
-    update-bss "${NCN_XNAMES[@]}"
+    update-bss "$fixed_kernel_object_k8s" "fixed_initrd_object_k8s" "${NCN_XNAMES[@]}"
 fi
 
 # Workers.
@@ -261,7 +314,7 @@ if [ "$workers" -eq 1 ]; then
     if IFS=$'\n' read -rd '' -a NCN_XNAMES; then
     :
     fi <<< "$(cray hsm state components list --role Management --subrole Worker --type Node --format json | jq -r '.Components | map(.ID) | join("\n")')"
-    update-bss "${NCN_XNAMES[@]}"
+    update-bss "$fixed_kernel_object_k8s" "fixed_initrd_object_k8s" "${NCN_XNAMES[@]}"
 fi
 
 # Storage.
@@ -269,10 +322,10 @@ if [ "$storage" -eq 1 ]; then
     if IFS=$'\n' read -rd '' -a NCN_XNAMES; then
     :
     fi <<< "$(cray hsm state components list --role Management --subrole Storage --type Node --format json | jq -r '.Components | map(.ID) | join("\n")')"
-    update-bss "${NCN_XNAMES[@]}"
+    update-bss "$fixed_kernel_object_ceph" "$fixed_initrd_object_ceph" "${NCN_XNAMES[@]}"
 fi
 
-echo "The following NCN masters and workers received the patch."
+echo "The following NCN nodes received the patch."
 printf "\t%s\n" "${NCNS[@]}"
 echo "Each of the listed NCNs must reboot for the patch to take effect."
 

@@ -35,7 +35,7 @@ else
     -n|--name) echo "$RELEASE_NAME" ;;
     -v|--version) echo "$RELEASE_VERSION" ;;
     *)
-        echo >&2 "error: unsupported argumented: $1"
+        echo >&2 "error: unsupported argument: $1"
         echo >&2 "usage: ${0##*/} [--name|--version]"
         ;;
     esac
