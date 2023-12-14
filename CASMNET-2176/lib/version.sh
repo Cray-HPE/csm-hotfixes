@@ -2,7 +2,7 @@
 
 # Copyright 2020 Hewlett Packard Enterprise Development LP
 
-: "${RELEASE:="${RELEASE_NAME:="CASMHMS-5236"}-${RELEASE_VERSION:="1.4.2-2"}"}"
+: "${RELEASE:="${RELEASE_NAME:="CASMNET-2176"}-${RELEASE_VERSION:="1.0.0"}"}"
 
 # return if sourced
 return 0 2>/dev/null
