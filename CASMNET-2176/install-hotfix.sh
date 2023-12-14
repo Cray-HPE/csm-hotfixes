@@ -53,7 +53,7 @@ spec:
 EOF
 
 # Extract customizations.yaml
-kubectl -n loftsman get secret site-init -o jsonpath='{.data.customizations\.yaml}' > "${workdir}/customizations.yaml"
+kubectl -n loftsman get secret site-init -o jsonpath='{.data.customizations\.yaml}' | base64 -d > "${workdir}/customizations.yaml"
 
 # manifestgen
 manifestgen -c "${workdir}/customizations.yaml" -i "${workdir}/manifest.yaml" -o "${workdir}/deploy-hotfix.yaml"
