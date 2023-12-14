@@ -2,7 +2,8 @@
 
 ## Prerequisites
 
-- CSM 1.4.0 or higher
+- CSM versions 1.4.0 to 1.4.3
+  - This fix is included in CSM versions 1.4.4, 1.5.0, and 1.6.0.
 
 ## Changelog
 
@@ -25,8 +26,6 @@ Example:
 ```bash
 ./install-hotfix.sh
 ```
-
-This hotfix is included in CSM 1.4.4, 1.5.0, and 1.6.0. It will need to be re-applied if upgrading to an earlier release.
 
 ## Rollback
 
