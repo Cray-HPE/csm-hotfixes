@@ -1,1 +1,1 @@
-../../vendor/stash.us.cray.com/scm/shastarelm/release/lib/install.sh
+../../vendor/github.hpe.com/hpe/hpc-shastarelm-release/lib/install.sh
