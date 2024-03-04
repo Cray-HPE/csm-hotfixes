@@ -65,6 +65,12 @@ while [[ $# -gt 0 ]]; do
     rpm-sync "${HOTFIXDIR}/rpm/index.yaml" "${BUILDDIR}/rpm"
   fi
 
+  if [[ -f "${HOTFIXDIR}/rpm/.createrepo" ]]; then
+    echo "Running createrepo on RPMs"
+    rm -f "${HOTFIXDIR}/rpm/.createrepo"
+    createrepo "${BUILDDIR}/rpm"
+  fi
+
   # Sync container images
   if [[ -f "${HOTFIXDIR}/docker/index.yaml" ]]; then
     echo "Syncing container images"

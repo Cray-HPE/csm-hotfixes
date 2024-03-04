@@ -1,0 +1,4 @@
+https://artifactory.algol60.net/artifactory/csm-rpms/hpe/stable/noos/:
+  rpms:
+    - spire-agent-1.5.5-1.10.aarch64
+    - spire-agent-1.5.5-1.10.x86_64
