@@ -24,7 +24,5 @@
 artifactory.algol60.net/csm-docker/stable:
   tls-verify: true
   images:
-    iuf:
-    - v3.1.13
     cray-nls:
     - 3.1.13
