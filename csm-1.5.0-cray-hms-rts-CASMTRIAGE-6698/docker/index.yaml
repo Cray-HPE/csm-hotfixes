@@ -1,0 +1,7 @@
+artifactory.algol60.net/csm-docker/stable:
+  tls-verify: true
+  images:
+    hms-redfish-translation-service:
+    - 1.24.0
+
+
