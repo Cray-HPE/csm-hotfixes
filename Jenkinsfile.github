@@ -93,7 +93,9 @@ pipeline {
               DIST_FILE="dist/${RELEASE}.tar.gz"
               GCS_FILE="${GCS_PREFIX}/${RELEASE}.tar.gz"
 
-              sha256sum ${DIST_FILE} > ${DIST_FILE}.sha256.txt
+              cd dist
+              sha256sum ${RELEASE}.tar.gz > ${RELEASE}.tar.gz.sha256.txt
+              cd ..
 
               echo "Uploading ${DIST_FILE} to ${GCS_FILE}"
               gsutil cp ${DIST_FILE} ${GCS_FILE}
