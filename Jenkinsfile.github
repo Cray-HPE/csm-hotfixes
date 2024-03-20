@@ -93,8 +93,11 @@ pipeline {
               DIST_FILE="dist/${RELEASE}.tar.gz"
               GCS_FILE="${GCS_PREFIX}/${RELEASE}.tar.gz"
 
+              sha256sum ${DIST_FILE} > ${DIST_FILE}.sha256.txt
+
               echo "Uploading ${DIST_FILE} to ${GCS_FILE}"
               gsutil cp ${DIST_FILE} ${GCS_FILE}
+              gsutil cp ${DIST_FILE}.sha256.txt ${GCS_FILE}.sha256.txt
 
               URL="https://storage.googleapis.com/csm-release-public/hotfix/${RELEASE}.tar.gz"
               echo "Hotfix available at"
