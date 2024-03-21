@@ -1,4 +1,5 @@
 https://artifactory.algol60.net/artifactory/csm-rpms/hpe/stable/noos/:
   rpms:
+    - metal-ipxe-2.4.8-1.noarch
     - spire-agent-1.5.5-1.10.aarch64
     - spire-agent-1.5.5-1.10.x86_64
