@@ -10,7 +10,7 @@ This hotfix will:
     * Installs `createrepo_c` if it is not already installed.
 * **Delete** the remote repository, and the repository group "csm-noos." This helps ensure that nexus doesn't have any issues or conflicts when we upload the artifacts by bringing Nexus's csm-noos to a cleanslate.
 * Recreates the respective csm-noos member repository and the csm-noos repository group.
-* Uplo
+* Upload the newly created repository to Nexus, and add it to the csm-noos repository group.
 
 ## JIRA(s)
 
