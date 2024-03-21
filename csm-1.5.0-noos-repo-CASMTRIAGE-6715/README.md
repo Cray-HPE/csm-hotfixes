@@ -10,7 +10,7 @@ This hotfix will:
     * Installs `createrepo_c` if it is not already installed.
 * **Delete** the remote repository, and the repository group "csm-noos." This helps ensure that nexus doesn't have any issues or conflicts when we upload the artifacts by bringing Nexus's csm-noos to a cleanslate.
 * Recreates the respective csm-noos member repository and the csm-noos repository group.
-* Uplo
+* Upload the newly created repository to Nexus, and add it to the csm-noos repository group.
 
 ## JIRA(s)
 
@@ -19,6 +19,7 @@ This hotfix covers the following JIRA(s):
 > ***NOTE*** If/when additional RPMs are added, their corresponding JIRAs should be included here.
 
 * [CASMTRIAGE-6715](https://jira-pro.it.hpe.com:8443/browse/CASMTRIAGE-6715)
+* [CASMTRIAGE-6796](https://jira-pro.it.hpe.com:8443/browse/CASMTRIAGE-6796)
 
 ## Usage
 
