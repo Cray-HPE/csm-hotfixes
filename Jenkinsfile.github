@@ -35,8 +35,6 @@ pipeline {
 
           gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}
           gcloud config set core/project csm-release
-          mkdir -p dist
-          touch dist/build.txt
         '''
       }
     }
@@ -44,23 +42,36 @@ pipeline {
     stage('Find hotfixes to build') {
       steps {
         sh '''
-          find . -maxdepth 3 -mindepth 3 -wholename '*/lib/version.sh' ! -wholename './.*' ! -wholename './vendor/*' | while read VERSION_SH; do
+          mkdir -p dist
+          rm -f dist/build.txt
+          touch dist/build.txt
+          find . -maxdepth 4 -mindepth 4 -wholename '*/lib/version.sh' ! -wholename './.*' ! -wholename './vendor/*' | while read VERSION_SH; do
             RELEASE="$("$VERSION_SH")"
+            FOLDER="$(basename "$(dirname "${VERSION_SH%/lib/version.sh}")")"
 
-            GCS_FILE="${GCS_PREFIX}/${RELEASE}.tar.gz"
+            # For 1.5.0, leave hotfixes in the root folder, until we release 1.5.1
+            if [ "${FOLDER}" == "csm-1.5" ]; then
+              GCS_FILE="${GCS_PREFIX}/${RELEASE}.tar.gz"
+            else
+              GCS_FILE="${GCS_PREFIX}/${FOLDER}/${RELEASE}.tar.gz"
+            fi
 
             echo "Looking for existing distribution ${GCS_FILE}"
-            if gsutil -q stat ${GCS_FILE}; then
-              echo "Distribution already found for ${RELEASE}. Not rebuilding"
+            if gsutil -q stat "${GCS_FILE}"; then
+              echo "Distribution already found for ${FOLDER}/${RELEASE}. Not rebuilding."
               echo "https://storage.googleapis.com/csm-release-public/hotfix/${RELEASE}.tar.gz"
             else
-              echo "Distribution not found for ${RELEASE}. Building"
+              echo "Distribution not found for ${FOLDER}/${RELEASE}. Building."
               echo "${VERSION_SH}" >> dist/build.txt
             fi
           done
 
-          echo "Hotfixes to build"
-          cat dist/build.txt
+          if [ -s dist/build.txt ]; then
+            echo "Hotfixes to build:"
+            cat dist/build.txt
+          else
+            echo "Nothing to build."
+          fi
         '''
       }
     }
@@ -69,11 +80,15 @@ pipeline {
       steps {
        withCredentials([usernamePassword(credentialsId: credentialsId, usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_TOKEN')]) {
         sh '''
-          while read VERSION_SH; do
-            HOTFIX="${VERSION_SH%%/lib/version.sh}"
-            echo "Building ${HOTFIX}"
-            ./release.sh "$HOTFIX"
-          done < dist/build.txt
+          if [ -s dist/build.txt ]; then
+            while read VERSION_SH; do
+              HOTFIX="${VERSION_SH%%/lib/version.sh}"
+              echo "Building ${HOTFIX}"
+              ./release.sh "$HOTFIX"
+            done < dist/build.txt
+          else
+            echo "Nothing to build."
+          fi
         '''
        }
       }

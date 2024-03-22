@@ -1,19 +1,22 @@
 # CSM Hotfixes
 
-This repo. contains hotfixes which are individually packaged and made available
-to customers. Changes are built and uploaded per folder as the .version file in
-each directory is changed.
+This repo contains hotfixes which are individually packaged and made available
+to customers. Changes are built and uploaded for each hotfix, if resulting artifact is not yet available
+at upload location. The resulting artifact URL is evaluated as
 
-The resulting artifact becomes available at `https://storage.googleapis.com/csm-release-public/hotfix/<release>.tar.gz`
+    https://storage.googleapis.com/csm-release-public/hotfix/<csm_release_dir>/$(<hotfix_dir>/lib/version.sh).tar.gz
+
+for hotfix located in `<csm_release_dir>/<hotfix_dir>/`.
 
 ## Hotfix Distributions
 
-Run `./release.sh <hotfix>` to generate a distribution for the specified
+Run `./release.sh <csm_release_dir>/<hotfix_dir>` to generate a distribution for the specified
 hotfix.
 
 ## Hotfix Directory Structure
 
-Each hotfix directory is expected to contain asset indexes and scripts for
+Each hotfix directory is located under respective CSM release directory: `<csm_release_dir>/<hotfix_dir>/`.
+Hotfix directory is expected to contain asset indexes and scripts for
 applying the hotfix. The following files are used by `release.sh` to generate
 hotfix distributions:
 
@@ -84,5 +87,5 @@ CSM repository:
   ```
 
 [git vendor]: https://github.com/brettlangdon/git-vendor
-[SHASTARELM/release]: https://stash.us.cray.com/projects/SHASTARELM/repos/release/browse
+[SHASTARELM/release]: https://github.hpe.com/hpe/hpc-shastarelm-release
 [SHASTA-CFG/stable]: https://github.com/Cray-HPE/shasta-cfg
