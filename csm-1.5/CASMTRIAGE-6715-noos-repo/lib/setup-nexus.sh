@@ -111,34 +111,6 @@ function download-items {
     echo "$workdir"
 }
 
-function update-repomd {
-    local repository
-    local installed=0
-    repository="$1"
-    if ! command -v createrepo >/dev/null 2>&1 ; then
-        echo >&2 'createrepo was not found, attempting to install dependency ... '
-        installed_packages="$(zypper -n in -y createrepo_c | grep -A 1 'going to be installed' | tail -n 1)"
-        installed=1
-    fi
-    if [ ! -d "$repository" ]; then
-        echo >&2 "Can not update directory [$repository]; does not exist."
-        return 1
-    fi
-    printf 'Updating local repository metadata structure to account for new RPMs ... '
-    if createrepo -q --update "$repository"; then
-        echo 'Done'
-    else
-        echo 'Failed!'
-        return 1
-    fi
-    if [ "$installed" -eq 1 ]; then
-        printf "Cleaning up install of [%s] ... " "$installed_packages"
-        # shellcheck disable=SC2086
-        zypper -q -n remove -y $installed_packages >/dev/null 2>&1
-        echo 'Done'
-    fi
-}
-
 printf 'Resolving repository member for csm-noos ... '
 repository="$(get-csm-noos-member)"
 if [ -n "$repository" ]; then
@@ -183,7 +155,7 @@ else
     exit 1
 fi
 
-update-repomd "$repository" || exit 1
+createrepo "$repository"
 
 nexus-delete-repo csm-noos
 nexus-delete-repo "$repository"
