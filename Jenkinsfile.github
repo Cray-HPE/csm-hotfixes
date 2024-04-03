@@ -27,12 +27,6 @@ pipeline {
     stage('Setup') {
       steps {
         sh '''#!/usr/bin/env bash
-          # Pull release tools
-          source "./vendor/github.hpe.com/hpe/hpc-shastarelm-release/lib/release.sh"
-          docker pull "$PACKAGING_TOOLS_IMAGE"
-          docker pull "$RPM_TOOLS_IMAGE"
-          docker pull "$SKOPEO_IMAGE"
-
           gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}
           gcloud config set core/project csm-release
         '''
