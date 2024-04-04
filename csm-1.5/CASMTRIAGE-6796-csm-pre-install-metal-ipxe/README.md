@@ -21,7 +21,7 @@ This hotfix covers the following JIRA(s):
 
 1. Set `CSM_PATH`, this needs to be the root of the extracted 1.5.0 tarball.
 
-> Example: `/var/www/ephemeral/csm-1.5.0`
+   > Example: `/var/www/ephemeral/csm-1.5.0`
 
 1. Run the hotfix.
 
