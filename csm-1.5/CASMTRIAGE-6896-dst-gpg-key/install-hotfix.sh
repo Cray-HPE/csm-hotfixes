@@ -17,86 +17,120 @@
 #  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 #  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-#  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+#  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR
 #  OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 #  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #  OTHER DEALINGS IN THE SOFTWARE.
 #
+
 set -eo pipefail
+
 ROOT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOT_DIR}/lib/install.sh"
 source "${ROOT_DIR}/lib/version.sh"
 
 function usage {
-
   cat << EOF
-usage:
-
-./install-hotfix.sh [-v] [-c CSM_PATH]
+Usage: $0 [-v]
 
 Flags:
-
--c              Set the CSM_PATH with a value via the command-line.
--v              Verbose (run with set -x).
-
-Environment Variables:
-CSM_PATH        The root of the extracted CSM tarball.
+  -v    Verbose (run with set -x).
 EOF
 }
 
-CSM_PATH="${CSM_PATH:-}"
-while getopts ":vc:" o; do
-  case "${o}" in
-    c)
-      CSM_PATH="${OPTARG}"
+while getopts "v" opt; do
+  case "${opt}" in
+    v) 
+      set -x;
       ;;
-    v)
-      set -x
-      ;;
-    *)
-      usage
-      exit 2
-      ;;
+    *) usage;
+       exit 2
+       ;;
   esac
 done
-shift $((OPTIND - 1))
 
-if [ -z "$CSM_PATH" ]; then
-    echo >&2 "CSM_PATH was not set! Aborting."
-    exit 1
-fi
-
-if ! load-install-deps; then
-  echo >&2 'Failed to load installation deps! Hotfix is corrupt.'
+if [[ -f /etc/pit-release ]]; then
+  echo >&2 "Cannot run this hotfix on the PIT node"
   exit 1
 fi
 
-repository="${CSM_PATH}/rpm/cray/csm/noos"
-if [ ! -d "$repository" ]; then
-    echo >&2 "$repository was not found! Directory does not exist. Tarball needs to be downloaded and extracted before running this hotfix."
-    exit 1
+EXPECTED_NCNS=($(grep -oP 'ncn-[mws]\d+' /etc/hosts | sort -u))
+if [[ ${#EXPECTED_NCNS[@]} -eq 0 ]]; then
+  echo >&2 "No NCNs found in /etc/hosts! This NCN is not initialized, /etc/hosts should have content."
+  exit 1
 fi
-printf 'Copying hotfix RPMs into downloaded repository %s ... ' "$repository"
-if rsync -rltDq "${ROOT_DIR}/rpm/" "${repository}/"; then
-    echo 'Done'
+
+NCNS=()
+for ncn in "${EXPECTED_NCNS[@]}"; do
+  if ping -c 1 "$ncn" >/dev/null 2>&1; then
+    NCNS+=("$ncn")
+  else
+    echo >&2 "Failed to ping [$ncn]; skipping hotfix for [$ncn]"
+  fi
+done
+
+if [[ ${#NCNS[@]} -eq 0 ]]; then
+  echo >&2 "No reachable NCNs found"
+  exit 1
+fi
+
+echo "Importing DST GPG key on [${#NCNS[@]}] running NCNs"
+GPG_KEY_ID="hpe-signing-key-fips.asc"
+
+# Push gpg key to the NCNs
+for ncn in "${NCNS[@]}"; do
+  ssh-keyscan -H "${ncn}" 2>/dev/null >> ~/.ssh/known_hosts || {
+    echo >&2 "Failed to add $ncn to known hosts"
+    continue
+  }
+  scp "${ROOT_DIR}/${GPG_KEY_ID}" "${ncn}:/tmp/" || {
+    echo >&2 "Failed to copy GPG key to $ncn"
+    continue
+  }
+done
+
+# Import gpg key on the NCN
+NCNS_STR=$(IFS=','; echo "${NCNS[*]}")
+if ! pdsh -w "${NCNS_STR}" "rpm --import /tmp/${GPG_KEY_ID}"; then
+  echo "GPG key import failed on one or more NCNs."
+  exit 1
 else
-    echo 'Failed!'
-    exit 1
+  echo "GPG key import completed successfully on all NCNs."
 fi
 
-createrepo "$repository"
+# Fetch, patch and upload base images
+echo "Patching base images in IMS."
 
-boot_script="$(rpm -q --filesbypkg metal-ipxe | awk '/script\.ipxe/{print $NF}')"
-if [ -z "$boot_script" ]; then
-  # No boot script to remove, metal-ipxe is not installed.
-  :
-elif [ -f "$boot_script" ]; then
-  rm -f "$boot_script"
-fi
+TEMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
-clean-install-deps
+IMAGES=$(kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' 2>/dev/null | \
+         yq r -j - | \
+         jq -r '."1.5.2".images | with_entries(select(.key | test("secure-(kubernetes|storage-ceph)"))) | map_values(.id)')
+
+DATE=$(date +%Y%m%d)
+for rootfs in $(jq -r 'keys_unsorted[]' <<< "${IMAGES}"); do
+  image_id=$(jq -r --arg key "${rootfs}" '.[$key]' <<< "${IMAGES}")
+  cray artifacts get boot-images "${image_id}/kernel" "${TEMP_DIR}/${image_id}.kernel"
+  cray artifacts get boot-images "${image_id}/initrd" "${TEMP_DIR}/${image_id}.initrd"
+  cray artifacts get boot-images "${image_id}/rootfs" "${TEMP_DIR}/${rootfs}"
+
+  unsquashfs -d "${TEMP_DIR}/unsquashed-${rootfs}" "${TEMP_DIR}/${rootfs}"
+  cp "${ROOT_DIR}/${GPG_KEY_ID}" "${TEMP_DIR}/unsquashed-${rootfs}/tmp/"
+  chroot "${TEMP_DIR}/unsquashed-${rootfs}" rpm --import "/tmp/${GPG_KEY_ID}"
+  rm -f "${TEMP_DIR}/unsquashed-${rootfs}/tmp/${GPG_KEY_ID}"
+  mksquashfs "${TEMP_DIR}/unsquashed-${rootfs}" "${TEMP_DIR}/${rootfs}-${DATE}" -no-xattrs -comp gzip -no-exports -noappend -no-recovery -processors "$(nproc)"
+
+  ${ROOT_DIR}/init-ims-image.sh \
+      -b boot-images \
+      -n "${rootfs}-${DATE}" \
+      -k "${TEMP_DIR}/${image_id}.kernel" \
+      -i "${TEMP_DIR}/${image_id}.initrd" \
+      -r "${TEMP_DIR}/${rootfs}-${DATE}"
+done
 
 cat >&2 <<EOF
 + Hotfix installed
 ${0##*/}: OK
 EOF
+
