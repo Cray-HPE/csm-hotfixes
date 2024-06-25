@@ -190,10 +190,15 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+manifest_etag=$(head -c 32 /dev/urandom | md5sum | awk '{print $1}')
+
 cat <<EOF > $MANIFEST
   {
     "created": "$(date '+%Y-%m-%d %H:%M:%S')",
     "version": "1.0",
+    "link": {
+        "etag": "${manifest_etag}"
+      },
     "artifacts": [
       {
         "link": {

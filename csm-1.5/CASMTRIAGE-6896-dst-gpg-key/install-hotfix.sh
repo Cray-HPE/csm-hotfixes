@@ -49,11 +49,13 @@ while getopts "v" opt; do
   esac
 done
 
+# Dont run on PIT node
 if [[ -f /etc/pit-release ]]; then
   echo >&2 "Cannot run this hotfix on the PIT node"
   exit 1
 fi
 
+# Find all NCNs in /etc/hosts
 EXPECTED_NCNS=($(grep -oP 'ncn-[mws]\d+' /etc/hosts | sort -u))
 if [[ ${#EXPECTED_NCNS[@]} -eq 0 ]]; then
   echo >&2 "No NCNs found in /etc/hosts! This NCN is not initialized, /etc/hosts should have content."
@@ -61,6 +63,7 @@ if [[ ${#EXPECTED_NCNS[@]} -eq 0 ]]; then
 fi
 
 NCNS=()
+# Ping all of the NCNs we know about
 for ncn in "${EXPECTED_NCNS[@]}"; do
   if ping -c 1 "$ncn" >/dev/null 2>&1; then
     NCNS+=("$ncn")
@@ -76,6 +79,8 @@ fi
 
 echo "Importing DST GPG key on [${#NCNS[@]}] running NCNs"
 GPG_KEY_NAME="hpe-signing-key-fips.asc"
+export PDSH_SSH_ARGS_APPEND="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+export SSH_ARGS="${PDSH_SSH_ARGS_APPEND}"
 
 # Push gpg key to the NCNs
 for ncn in "${NCNS[@]}"; do
@@ -83,7 +88,7 @@ for ncn in "${NCNS[@]}"; do
     echo >&2 "Failed to add $ncn to known hosts"
     continue
   }
-  scp "${ROOT_DIR}/${GPG_KEY_NAME}" "${ncn}:/tmp/" || {
+  scp ${SSH_ARGS} "${ROOT_DIR}/${GPG_KEY_NAME}" "${ncn}:/tmp/" || {
     echo >&2 "Failed to copy GPG key to $ncn"
     continue
   }
@@ -104,32 +109,40 @@ echo "Patching base images in IMS."
 TEMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
-# Get image names from the CSM product catalog
-IMAGES=$(kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' 2>/dev/null | \
+export IMAGES=$(kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' 2>/dev/null | \
          yq r -j - | \
          jq -r '."1.5.2".images | with_entries(select(.key | test("secure-(kubernetes|storage-ceph)"))) | map_values(.id)')
 
-DATE=$(date +%Y%m%d)
-for rootfs in $(jq -r 'keys_unsorted[]' <<< "${IMAGES}"); do
-  # Download the rootfs, kernel, initrd
-  image_id=$(jq -r --arg rootfs "${rootfs}" '.[$rootfs]' <<< "${IMAGES}")
+# Get image ID's from running NCNs
+RUNNING_IMAGES=($(pdsh -SNw "${NCNS_STR}" "grep -oP 'boot-images/\K[0-9a-fA-F-]{36}(?=/rootfs)' /proc/cmdline"))
 
-  cray artifacts get boot-images "${image_id}/kernel" "${TEMP_DIR}/${image_id}.kernel" || \
-      { echo  >&2 "Failed to download kernel for ${rootfs}"; exit 1; }
-  cray artifacts get boot-images "${image_id}/initrd" "${TEMP_DIR}/${image_id}.initrd" || \
-      { echo  >&2 "Failed to download initrd for ${rootfs}"; exit 1; }
-  cray artifacts get boot-images "${image_id}/rootfs" "${TEMP_DIR}/${image_id}.rootfs" || \
-      { echo  >&2 "Failed to download rootfs for ${rootfs}"; exit 1; }
+for image in "${RUNNING_IMAGES[@]}"; do
+  export RUNNING_IMAGE_JSON
+  RUNNING_IMAGE_JSON=$(cray ims images list --format json | jq 'map(select(.id == "'${image}'")) | map({(.name): .id}) | add')
+  IMAGES=$(jq -n --argjson doc1 "${IMAGES}" --argjson doc2 "${RUNNING_IMAGE_JSON}" '$doc1 * $doc2')
+done
+
+
+DATE=$(date +%Y%m%d%s)
+for rootfs in $(jq -r 'keys_unsorted[]' <<< "${IMAGES}"); do
+  ims_id=$(jq -r --arg rootfs "${rootfs}" '.[$rootfs]' <<< "${IMAGES}")
+  # Download the rootfs, kernel, initrd
+  cray artifacts get boot-images "${ims_id}/kernel" "${TEMP_DIR}/${ims_id}.kernel" || \
+      { echo  >&2 "Failed to download kernel for ${ims_id}"; exit 1; }
+  cray artifacts get boot-images "${ims_id}/initrd" "${TEMP_DIR}/${ims_id}.initrd" || \
+      { echo  >&2 "Failed to download initrd for ${ims_id}"; exit 1; }
+  cray artifacts get boot-images "${ims_id}/rootfs" "${TEMP_DIR}/${ims_id}.rootfs" || \
+      { echo  >&2 "Failed to download rootfs for ${ims_id}"; exit 1; }
 
   # Unsquash the rootfs and import the GPG key
-  unsquashfs -d "${TEMP_DIR}/unsquashed-${rootfs}" "${TEMP_DIR}/${image_id}.rootfs"
-  cp "${ROOT_DIR}/${GPG_KEY_NAME}" "${TEMP_DIR}/unsquashed-${rootfs}/tmp/"
-  chroot "${TEMP_DIR}/unsquashed-${rootfs}" \
+  unsquashfs -d "${TEMP_DIR}/unsquashed-${ims_id}" "${TEMP_DIR}/${ims_id}.rootfs"
+  cp "${ROOT_DIR}/${GPG_KEY_NAME}" "${TEMP_DIR}/unsquashed-${ims_id}/tmp/"
+  chroot "${TEMP_DIR}/unsquashed-${ims_id}" \
       rpm --import "/tmp/${GPG_KEY_NAME}"
 
   # Cleanup and make squashfs
-  rm -f "${TEMP_DIR}/unsquashed-${rootfs}/tmp/${GPG_KEY_NAME}"
-  mksquashfs "${TEMP_DIR}/unsquashed-${rootfs}" "${TEMP_DIR}/${rootfs}-${DATE}" \
+  rm -f "${TEMP_DIR}/unsquashed-${ims_id}/tmp/${GPG_KEY_NAME}"
+  mksquashfs "${TEMP_DIR}/unsquashed-${ims_id}" "${TEMP_DIR}/${ims_id}-${DATE}" \
       -no-xattrs \
       -comp gzip \
       -no-exports \
@@ -137,17 +150,20 @@ for rootfs in $(jq -r 'keys_unsorted[]' <<< "${IMAGES}"); do
       -no-recovery \
       -processors "$(nproc)"
 
-  # Upload the patched image to IMS
+  # Upload the patched image and remove each image after successful upload to IMS
   "${ROOT_DIR}/init-ims-image.sh" \
       -b boot-images \
       -n "${rootfs}-${DATE}" \
-      -k "${TEMP_DIR}/${image_id}.kernel" \
-      -i "${TEMP_DIR}/${image_id}.initrd" \
-      -r "${TEMP_DIR}/${rootfs}-${DATE}"
+      -k "${TEMP_DIR}/${ims_id}.kernel" \
+      -i "${TEMP_DIR}/${ims_id}.initrd" \
+      -r "${TEMP_DIR}/${ims_id}-${DATE}" && \
+  rm -f "${TEMP_DIR}/${ims_id}.kernel" \
+        "${TEMP_DIR}/${ims_id}.initrd" \
+        "${TEMP_DIR}/${ims_id}.rootfs" \
+        "${TEMP_DIR}/${ims_id}-${DATE}"
 done
 
 cat >&2 <<EOF
 + Hotfix installed
 ${0##*/}: OK
 EOF
-
