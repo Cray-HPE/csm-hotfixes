@@ -22,7 +22,7 @@
 #  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #  OTHER DEALINGS IN THE SOFTWARE.
 #
-: "${RELEASE:="${RELEASE_NAME:="CASMTRIAGE-6796-csm-pre-install-metal-ipxe"}-${RELEASE_VERSION:="1"}"}"
+: "${RELEASE:="${RELEASE_NAME:="CASMTRIAGE-6896-dst-gpg-key"}-${RELEASE_VERSION:="1"}"}"
 
 # return if sourced
 return 0 2>/dev/null
