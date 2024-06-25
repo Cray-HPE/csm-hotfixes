@@ -75,7 +75,7 @@ if [[ ${#NCNS[@]} -eq 0 ]]; then
 fi
 
 echo "Importing DST GPG key on [${#NCNS[@]}] running NCNs"
-GPG_KEY_ID="hpe-signing-key-fips.asc"
+GPG_KEY_NAME="hpe-signing-key-fips.asc"
 
 # Push gpg key to the NCNs
 for ncn in "${NCNS[@]}"; do
@@ -83,7 +83,7 @@ for ncn in "${NCNS[@]}"; do
     echo >&2 "Failed to add $ncn to known hosts"
     continue
   }
-  scp "${ROOT_DIR}/${GPG_KEY_ID}" "${ncn}:/tmp/" || {
+  scp "${ROOT_DIR}/${GPG_KEY_NAME}" "${ncn}:/tmp/" || {
     echo >&2 "Failed to copy GPG key to $ncn"
     continue
   }
@@ -91,37 +91,54 @@ done
 
 # Import gpg key on the NCN
 NCNS_STR=$(IFS=','; echo "${NCNS[*]}")
-if ! pdsh -w "${NCNS_STR}" "rpm --import /tmp/${GPG_KEY_ID}"; then
+if ! pdsh -w "${NCNS_STR}" "rpm --import /tmp/${GPG_KEY_NAME}"; then
   echo "GPG key import failed on one or more NCNs."
   exit 1
 else
   echo "GPG key import completed successfully on all NCNs."
 fi
 
-# Fetch, patch and upload base images
+# Fetch, patch and upload base images (IMS)
 echo "Patching base images in IMS."
 
 TEMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
+# Get image names from the CSM product catalog
 IMAGES=$(kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' 2>/dev/null | \
          yq r -j - | \
          jq -r '."1.5.2".images | with_entries(select(.key | test("secure-(kubernetes|storage-ceph)"))) | map_values(.id)')
 
 DATE=$(date +%Y%m%d)
 for rootfs in $(jq -r 'keys_unsorted[]' <<< "${IMAGES}"); do
-  image_id=$(jq -r --arg key "${rootfs}" '.[$key]' <<< "${IMAGES}")
-  cray artifacts get boot-images "${image_id}/kernel" "${TEMP_DIR}/${image_id}.kernel"
-  cray artifacts get boot-images "${image_id}/initrd" "${TEMP_DIR}/${image_id}.initrd"
-  cray artifacts get boot-images "${image_id}/rootfs" "${TEMP_DIR}/${rootfs}"
+  # Download the rootfs, kernel, initrd
+  image_id=$(jq -r --arg rootfs "${rootfs}" '.[$rootfs]' <<< "${IMAGES}")
 
-  unsquashfs -d "${TEMP_DIR}/unsquashed-${rootfs}" "${TEMP_DIR}/${rootfs}"
-  cp "${ROOT_DIR}/${GPG_KEY_ID}" "${TEMP_DIR}/unsquashed-${rootfs}/tmp/"
-  chroot "${TEMP_DIR}/unsquashed-${rootfs}" rpm --import "/tmp/${GPG_KEY_ID}"
-  rm -f "${TEMP_DIR}/unsquashed-${rootfs}/tmp/${GPG_KEY_ID}"
-  mksquashfs "${TEMP_DIR}/unsquashed-${rootfs}" "${TEMP_DIR}/${rootfs}-${DATE}" -no-xattrs -comp gzip -no-exports -noappend -no-recovery -processors "$(nproc)"
+  cray artifacts get boot-images "${image_id}/kernel" "${TEMP_DIR}/${image_id}.kernel" || \
+      { echo  >&2 "Failed to download kernel for ${rootfs}"; exit 1; }
+  cray artifacts get boot-images "${image_id}/initrd" "${TEMP_DIR}/${image_id}.initrd" || \
+      { echo  >&2 "Failed to download initrd for ${rootfs}"; exit 1; }
+  cray artifacts get boot-images "${image_id}/rootfs" "${TEMP_DIR}/${image_id}.rootfs" || \
+      { echo  >&2 "Failed to download rootfs for ${rootfs}"; exit 1; }
 
-  ${ROOT_DIR}/init-ims-image.sh \
+  # Unsquash the rootfs and import the GPG key
+  unsquashfs -d "${TEMP_DIR}/unsquashed-${rootfs}" "${TEMP_DIR}/${image_id}.rootfs"
+  cp "${ROOT_DIR}/${GPG_KEY_NAME}" "${TEMP_DIR}/unsquashed-${rootfs}/tmp/"
+  chroot "${TEMP_DIR}/unsquashed-${rootfs}" \
+      rpm --import "/tmp/${GPG_KEY_NAME}"
+
+  # Cleanup and make squashfs
+  rm -f "${TEMP_DIR}/unsquashed-${rootfs}/tmp/${GPG_KEY_NAME}"
+  mksquashfs "${TEMP_DIR}/unsquashed-${rootfs}" "${TEMP_DIR}/${rootfs}-${DATE}" \
+      -no-xattrs \
+      -comp gzip \
+      -no-exports \
+      -noappend \
+      -no-recovery \
+      -processors "$(nproc)"
+
+  # Upload the patched image to IMS
+  "${ROOT_DIR}/init-ims-image.sh" \
       -b boot-images \
       -n "${rootfs}-${DATE}" \
       -k "${TEMP_DIR}/${image_id}.kernel" \

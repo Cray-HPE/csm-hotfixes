@@ -192,7 +192,7 @@ fi
 
 cat <<EOF > $MANIFEST
   {
-    "created": "`date '+%Y-%m-%d %H:%M:%S'`",
+    "created": "$(date '+%Y-%m-%d %H:%M:%S')",
     "version": "1.0",
     "artifacts": [
       {
