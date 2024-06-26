@@ -1,0 +1,5 @@
+---
+https://artifactory.algol60.net/artifactory/csm-helm-charts/stable:
+  charts:
+    csm-config:
+    - 1.16.33
