@@ -26,12 +26,14 @@ set -e
 
 ROOT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOT_DIR}/lib/version.sh"
+source "${ROOT_DIR}/lib/install.sh"
 
+CSM_RELEASE="1.5.2"
 GPG_KEY_FILE_NAME=hpe-signing-key-fips.asc
 
 function usage {
 
-  cat << EOF
+  cat <<EOF
 usage:
 
 ./install-hotfix.sh [-k]
@@ -44,13 +46,13 @@ EOF
 running_system_only=0
 while getopts ":k" o; do
   case "${o}" in
-    y)
-      running_system_only=1
-      ;;
-    *)
-      usage
-      exit 2
-      ;;
+  y)
+    running_system_only=1
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
   esac
 done
 shift $((OPTIND - 1))
@@ -67,7 +69,7 @@ else
 fi
 export NCNS=()
 for ncn in "${EXPECTED_NCNS[@]}"; do
-  if ping -c 1 "$ncn" > /dev/null 2>&1; then
+  if ping -c 1 "$ncn" >/dev/null 2>&1; then
     NCNS+=("$ncn")
   else
     echo >&2 "Failed to ping [$ncn]; skipping hotfix for [$ncn]"
@@ -76,20 +78,19 @@ done
 
 function patch_running_ncns {
   local gpg_key_file_name="${GPG_KEY_FILE_NAME}"
+  local PDSH_SSH_ARGS_APPEND="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
   for ncn in "${NCNS[@]}"; do
     scp "${ROOT_DIR}/keys/${gpg_key_file_name}" "${ncn}:/tmp/${gpg_key_file_name}"
   done
 
-  if ! PDSH_SSH_ARGS_APPEND="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" pdsh -S -b -w "$(printf '%s,' "${NCNS[@]}")" \
-  '
-  rpm --import /tmp/'"${gpg_key_file_name}"'
-  rm -vf /tmp/'"${gpg_key_file_name}"'
-  ';  then
+  if ! pdsh -S -b -w "$(printf '%s,' "${NCNS[@]}")" '
+    rpm --import /tmp/'"${gpg_key_file_name}"'
+    rm -vf /tmp/'"${gpg_key_file_name}"'
+  '; then
     echo >&2 'Failed to import the new HPE GPG key to one or more nodes!'
     return 1
   fi
-
 }
 
 if ! patch_running_ncns; then
@@ -98,24 +99,43 @@ if ! patch_running_ncns; then
 fi
 
 if [ "$running_system_only" -eq 1 ]; then
-  :
+  echo >&2 "Hotfix installed on running NCNs only."
+  exit 0
+fi
+
+############################################### CFS ########################################################
+
+workdir="$(mktemp -d)"
+if [ -z "${DEBUG:-}" ]; then
+  trap 'rm -fr '"${workdir}"'' ERR INT EXIT RETURN
 else
+  echo "DEBUG was set in environment, $workdir will not be cleaned up."
+fi
 
-  workdir="$(mktemp -d)"
-  if [ -z "${DEBUG:-}" ]; then
-    trap 'rm -fr '"${workdir}"'' ERR INT EXIT RETURN
-  else
-    echo "DEBUG was set in environment, $workdir will not be cleaned up."
+# Update the kubernetes secret with our new GPG key if it's not already present
+NEW_KEY_PATH="${ROOT_DIR}/keys/${GPG_KEY_FILE_NAME}"
+NEW_KEY_SIGNATURE="$(gpg --list-packets "${NEW_KEY_PATH}")"
+NEW_KEY_ENCODED="$(base64 -w 0 "${NEW_KEY_PATH}")"
+mapfile -t EXISTING_K8S_KEYS < <(kubectl -n services get secret hpe-signing-key -o jsonpath='{.data}' | jq -r 'keys[]')
+KEY_PRESENT=0
+
+for key in "${EXISTING_K8S_KEYS[@]}"; do
+  EXISTING_KEY_SIGNATURE="$(kubectl -n services get secret hpe-signing-key -o jsonpath="{.data.${key/./\\.}}" | base64 -d | gpg --list-packets)"
+
+  if [ "${EXISTING_KEY_SIGNATURE}" = "${NEW_KEY_SIGNATURE}" ]; then
+    echo "Key ${key} is already present in the secret. Refusing to add it again."
+    KEY_PRESENT=1
+    break
   fi
+done
 
-  # Update the kubectl secret with our new GPG key
-  # FIXME: This does not correctly merge the new key alongside the other keys.
-  # FIXME: Fix recursion - re-runs should not append the key again.
-  kubectl -n services get secret hpe-signing-key -o jsonpath='{.data}' | base64 -d >"${workdir}/hpe-signing-keys"
-  kubectl create secret generic hpe-signing-key -n services --from-file "${workdir}/hpe-signing-keys" --from-file hpe-signing-key --dry-run=client --save-config -o yaml | kubectl apply -f -
+if [ "${KEY_PRESENT}" -eq 0 ]; then
+  echo "Key ${key} is not present in the secret, adding."
+  kubectl patch secret hpe-signing-key -n services -p="{\"data\":{\"${GPG_KEY_FILE_NAME}\":\"${NEW_KEY_ENCODED}\"}}"
+fi
 
-  # Create new manifest.
-  cat > "${workdir}/manifest.yaml" << EOF
+# Create new manifest.
+cat >"${workdir}/manifest.yaml" <<EOF
 apiVersion: manifests/v1beta1
 metadata:
   name: casminst-6896-gpg-keys
@@ -132,23 +152,70 @@ spec:
     namespace: services
 EOF
 
-  # Merge manifest.
-  kubectl -n loftsman get secret site-init -o jsonpath='{.data.customizations\.yaml}' | base64 -d > "${workdir}/customizations.yaml"
-  manifestgen -c "${workdir}/customizations.yaml" -i "${workdir}/manifest.yaml" -o "${workdir}/deploy-hotfix.yaml"
+# Merge manifest.
+kubectl -n loftsman get secret site-init -o jsonpath='{.data.customizations\.yaml}' | base64 -d >"${workdir}/customizations.yaml"
+manifestgen -c "${workdir}/customizations.yaml" -i "${workdir}/manifest.yaml" -o "${workdir}/deploy-hotfix.yaml"
 
-  # Load artifacts into nexus
-  "${ROOT_DIR}/lib/setup-nexus.sh"
+# Load artifacts into nexus
+"${ROOT_DIR}/lib/setup-nexus.sh"
 
-  # Deploy chart.
-  loftsman ship --manifest-path "${workdir}/deploy-hotfix.yaml"
+# Deploy chart.
+loftsman ship --manifest-path "${workdir}/deploy-hotfix.yaml"
 
-  # TODO: Update CFS configuration for the mgmt NCNs. https://github.com/Cray-HPE/docs-csm/blob/release/1.5/upgrade/1.5.2/README.md#update-management-node-cfs-configuration
-  # Note: it is not necessary to run CFS against the running nodes, but if it's unavoidable then so be it.
-  # TODO: Trigger a CFS image build https://github.com/Cray-HPE/docs-csm/blob/release/1.5/upgrade/1.5.2/README.md#image-customization
+### Update CFS configuration START ###
+load-cfs-config-util
 
+cfs-config-util update-configs --product "${RELEASE_NAME}:${RELEASE_VERSION}" \
+  --playbook ncn_nodes.yml --playbook ncn-initrd.yml $@
+rc=$?
+
+if [ $rc -eq 2 ]; then
+  echo >&2 "cfs-config-util received invalid arguments."
+elif [ $rc -ne 0 ]; then
+  echo >&2 "Failed to update CFS configurations. cfs-config-util exited with exit status $rc."
 fi
 
-cat >&2 << EOF
+clean-install-deps
+### Update CFS configuration END ###
+
+### Trigger CFS image build START ###
+
+/usr/share/doc/csm/scripts/operations/configuration/apply_csm_configuration.sh \
+  --no-enable --config-name "management-${CSM_RELEASE}"
+
+KUBERNETES_IMAGE_ID="$(kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' |
+  yq r -j - '"'${CSM_RELEASE}'".images' |
+  jq -r '. as $o | keys_unsorted[] | select(startswith("secure-kubernetes")) | $o[.].id')"
+
+STORAGE_IMAGE_ID="$(kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' |
+  yq r -j - '"'${CSM_RELEASE}'".images' |
+  jq -r '. as $o | keys_unsorted[] | select(startswith("secure-storage")) | $o[.].id')"
+
+TSTAMP=$(date "+%Y%m%d%H%M%S")
+K8S_CFS_SESSION_NAME="management-k8s-${CSM_RELEASE}-${TSTAMP}"
+CEPH_CFS_SESSION_NAME="management-ceph-${CSM_RELEASE}-${TSTAMP}"
+
+cray cfs sessions create \
+  --target-group Management_Master \
+  "$KUBERNETES_IMAGE_ID" \
+  --target-definition image \
+  --target-image-map "$KUBERNETES_IMAGE_ID" "management-kubernetes-${CSM_RELEASE}" \
+  --configuration-name "management-${CSM_RELEASE}" \
+  --name "${K8S_CFS_SESSION_NAME}" \
+  --format json
+
+cray cfs sessions create \
+  --target-group Management_Storage \
+  "$STORAGE_IMAGE_ID" \
+  --target-definition image \
+  --target-image-map "$STORAGE_IMAGE_ID" "management-storage-${CSM_RELEASE}" \
+  --configuration-name "management-${CSM_RELEASE}" \
+  --name "${CEPH_CFS_SESSION_NAME}" \
+  --format json
+
+### Trigger CFS image build END ###
+
+cat >&2 <<EOF
 + Hotfix installed
 ${0##*/}: OK
 EOF
