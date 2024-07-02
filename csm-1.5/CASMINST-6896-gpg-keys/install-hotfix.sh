@@ -28,7 +28,6 @@ ROOT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 source "${ROOT_DIR}/lib/version.sh"
 source "${ROOT_DIR}/lib/install.sh"
 
-CSM_RELEASE="1.5.2"
 GPG_KEY_FILE_NAME=hpe-signing-key-fips.asc
 
 function usage {
@@ -36,12 +35,19 @@ function usage {
   cat <<EOF
 usage:
 
-./install-hotfix.sh [-k]
+CSM_RELEASE="1.5.x" ./install-hotfix.sh [-k]
 
 Flags:
 -k      Only import the GPG keys into the running NCNs, skip all CFS work.
 EOF
 }
+
+if [ -z "$CSM_RELEASE" ]; then
+  echo "Error: CSM_RELEASE variable is not set."
+  echo "Ex. CSM_RELEASE=\"1.5.1\""
+  usage
+  exit 1
+fi
 
 running_system_only=0
 while getopts ":k" o; do
@@ -99,7 +105,10 @@ if ! patch_running_ncns; then
 fi
 
 if [ "$running_system_only" -eq 1 ]; then
-  echo >&2 "Hotfix installed on running NCNs only."
+cat >&2 <<EOF
++ Hotfix installed
+${0##*/}: OK
+EOF
   exit 0
 fi
 
@@ -190,6 +199,12 @@ KUBERNETES_IMAGE_ID="$(kubectl -n services get cm cray-product-catalog -o jsonpa
 STORAGE_IMAGE_ID="$(kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' |
   yq r -j - '"'${CSM_RELEASE}'".images' |
   jq -r '. as $o | keys_unsorted[] | select(startswith("secure-storage")) | $o[.].id')"
+
+if [ -z "$KUBERNETES_IMAGE_ID" ] || [ -z "$STORAGE_IMAGE_ID" ]; then
+  echo >&2 "Failed to get image IDs for management-kubernetes-${CSM_RELEASE} or management-storage-${CSM_RELEASE}"
+  echo >&2 "Confirm that CSM_RELEASE is set correctly and the images exist in the product catalog."
+  exit 1
+fi
 
 TSTAMP=$(date "+%Y%m%d%H%M%S")
 K8S_CFS_SESSION_NAME="management-k8s-${CSM_RELEASE}-${TSTAMP}"
