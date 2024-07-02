@@ -113,10 +113,8 @@ while [[ $# -gt 0 ]]; do
   fi
 
   # Vendor cfs-config-util image to update CFS configurations
-  if [[ -d "${BUILDDIR}/cfs" ]]; then
-    echo "Vendoring cfs-config-util image in distribution"
-    vendor-install-deps --no-skopeo --no-cray-nexus-setup --include-cfs-config-util "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
-  fi
+  echo "Vendoring cfs-config-util image in distribution"
+  vendor-install-deps --no-skopeo --no-cray-nexus-setup --include-cfs-config-util "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
 
   # Package the distribution into an archive
   echo "Generating distribution tarball"
