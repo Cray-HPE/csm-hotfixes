@@ -35,17 +35,19 @@ function usage {
   cat <<EOF
 usage:
 
-CSM_RELEASE="1.5.x" ./install-hotfix.sh [-k]
+./install-hotfix.sh [-k]
 
 Flags:
 -k      Only import the GPG keys into the running NCNs, skip all CFS work.
 EOF
 }
 
-if [ -z "$CSM_RELEASE" ]; then
-  echo "Error: CSM_RELEASE variable is not set."
-  echo "Ex. CSM_RELEASE=\"1.5.1\""
-  usage
+# Get latest CSM release from the product catalog
+# or use the CSM_RELEASE environment variable if set
+DETECTED_CSM_RELEASE="$(kubectl get cm cray-product-catalog -n services -o jsonpath='{.data.csm}' | yq r -j - | jq -r 'to_entries[] | .key' | sort -V | tail -n 1)"
+[ -z "${CSM_RELEASE:-}" ] && [ -n "${DETECTED_CSM_RELEASE}" ] && CSM_RELEASE="${DETECTED_CSM_RELEASE}"
+if [ -z "${CSM_RELEASE}" ]; then
+  echo >&2 "Failed to resolve CSM_RELEASE from cray-product-catalog or from a CSM_RELEASE environment variable. Aborting."
   exit 1
 fi
 
