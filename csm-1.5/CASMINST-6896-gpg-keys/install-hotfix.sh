@@ -177,7 +177,7 @@ loftsman ship --manifest-path "${workdir}/deploy-hotfix.yaml"
 load-cfs-config-util
 
 cfs-config-util update-configs --product "${RELEASE_NAME}:${RELEASE_VERSION}" \
-  --playbook ncn_nodes.yml --playbook ncn-initrd.yml $@
+  --playbook ncn_nodes.yml --playbook ncn-initrd.yml --save-to-cfs $@
 rc=$?
 
 if [ $rc -eq 2 ]; then
