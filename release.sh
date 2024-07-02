@@ -113,8 +113,8 @@ while [[ $# -gt 0 ]]; do
   fi
 
   # Vendor cfs-config-util image to update CFS configurations
-  if [[ -d "${BUILDDIR}/rpm" ]]; then
-    echo "Vendoring rpmtools image in distribution"
+  if [[ -d "${BUILDDIR}/cfs" ]]; then
+    echo "Vendoring cfs-config-util image in distribution"
     vendor-install-deps --no-skopeo --no-cray-nexus-setup --include-cfs-config-util "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
   fi
 
