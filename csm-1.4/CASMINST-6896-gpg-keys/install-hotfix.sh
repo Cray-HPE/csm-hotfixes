@@ -160,7 +160,7 @@ spec:
   charts:
   - name: csm-config
     source: nexus
-    version: 1.16.33
+    version: 1.15.30
     namespace: services
 EOF
 
