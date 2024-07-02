@@ -54,7 +54,7 @@ fi
 running_system_only=0
 while getopts ":k" o; do
   case "${o}" in
-  y)
+  k)
     running_system_only=1
     ;;
   *)

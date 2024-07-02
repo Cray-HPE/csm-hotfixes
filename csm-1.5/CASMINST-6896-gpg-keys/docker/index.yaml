@@ -4,5 +4,3 @@ artifactory.algol60.net/csm-docker/stable:
   images:
     csm-config:
     - 1.16.33
-    cfs-config-util:
-    - 5.0.0

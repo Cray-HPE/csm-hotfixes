@@ -112,6 +112,12 @@ while [[ $# -gt 0 ]]; do
     vendor-install-deps --no-skopeo --no-cray-nexus-setup --include-rpm-tools "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
   fi
 
+  # Vendor cfs-config-util image to update CFS configurations
+  if [[ -d "${BUILDDIR}/rpm" ]]; then
+    echo "Vendoring rpmtools image in distribution"
+    vendor-install-deps --no-skopeo --no-cray-nexus-setup --include-cfs-config-util "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
+  fi
+
   # Package the distribution into an archive
   echo "Generating distribution tarball"
   tar -C "${BUILDDIR}/.." -cvhzf "${BUILDDIR}/../$(basename "$BUILDDIR").tar.gz" "$(basename "$BUILDDIR")/" --remove-files
