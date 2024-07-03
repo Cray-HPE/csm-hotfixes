@@ -109,7 +109,7 @@ if ! patch_running_ncns; then
 fi
 
 if [ "$running_system_only" -eq 1 ]; then
-cat >&2 <<EOF
+  cat >&2 <<EOF
 + Hotfix installed
 ${0##*/}: OK
 EOF
@@ -182,24 +182,27 @@ manifestgen -c "${workdir}/customizations.yaml" -i "${workdir}/manifest.yaml" -o
 loftsman ship --manifest-path "${workdir}/deploy-hotfix.yaml"
 
 # Update sysmgmt chart.
-kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/sysmgmt.yaml"
-yq w -i  "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).version' "${CSM_CONFIG_VERSION}"
+kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' >"${workdir}/sysmgmt.yaml"
+yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).version' "${CSM_CONFIG_VERSION}"
 loftsman ship --manifest-path "${workdir}/sysmgmt.yaml"
 
-# Update cray-product-catalog
-kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' > "${workdir}/cpc.yaml"
-yq eval -i ".\"${CSM_RELEASE}\".configuration.commit = \"${CSM_CONFIG_COMMIT}\"" "${workdir}/cpc.yaml"
-yq eval -i ".\"${CSM_RELEASE}\".configuration.import_branch = \"cray/csm/${CSM_CONFIG_VERSION}\"" "${workdir}/cpc.yaml"
-
-manifestgen -c "${workdir}/customizations.yaml" -i "${workdir}/manifest.yaml" -o "${workdir}/deploy-hotfix.yaml"
-loftsman ship --manifest-path "${workdir}/cpc.yaml"
+CPC_VERSION="1.8.3"
+podman run --rm --name ncn-cpc \
+  --user root \
+  -e PRODUCT=csm \
+  -e PRODUCT_VERSION=${CSM_RELEASE} \
+  -e YAML_CONTENT_STRING=\"{"configuration": {"commit": \"${CSM_CONFIG_COMMIT}\","import_branch": \"cray/csm/${CSM_CONFIG_VERSION}\"}}\" \
+  -e KUBECONFIG=/.kube/admin.conf \
+  -e VALIDATE_SCHEMA=\"true\" \
+  -v /etc/kubernetes:/.kube:ro \
+  registry.local/artifactory.algol60.net/csm-docker/stable/cray-product-catalog-update:${CPC_VERSION}
 
 ### Update CFS configuration START ###
 load-cfs-config-util
 
 cfs-config-util update-configs --product "csm:${CSM_RELEASE}" \
   --playbook ncn_nodes.yml \
-  --playbook ncn-initrd.yml \s
+  --playbook ncn-initrd.yml \
   --base-query role=management \
   --save \
   --create-backups \
