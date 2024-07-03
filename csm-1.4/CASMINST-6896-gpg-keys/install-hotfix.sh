@@ -29,6 +29,7 @@ source "${ROOT_DIR}/lib/version.sh"
 source "${ROOT_DIR}/lib/install.sh"
 
 GPG_KEY_FILE_NAME=hpe-signing-key-fips.asc
+CSM_CONFIG_VERSION="1.15.30"
 
 function usage {
 
@@ -124,6 +125,13 @@ else
   echo "DEBUG was set in environment, $workdir will not be cleaned up."
 fi
 
+mkdir -p "${workdir}/csm-config-management"
+PW=$(kubectl -n services get secret vcs-user-credentials -o jsonpath='{.data.vcs_password}' | base64 -d ; echo)
+git clone "https://crayvcs:${PW}@api-gw-service-nmn.local/vcs/cray/csm-config-management.git" "${workdir}/csm-config-management"
+CSM_CONFIG_COMMIT=$(git -C "${workdir}/csm-config-management" rev-parse "origin/cray/csm/${CSM_CONFIG_VERSION}")
+
+# Clone the csm-config-management repo to get the latest commit
+git clone 
 # Update the kubernetes secret with our new GPG key if it's not already present
 NEW_KEY_PATH="${ROOT_DIR}/keys/${GPG_KEY_FILE_NAME}"
 NEW_KEY_SIGNATURE="$(gpg --list-packets "${NEW_KEY_PATH}")"
@@ -160,7 +168,7 @@ spec:
   charts:
   - name: csm-config
     source: nexus
-    version: 1.15.30
+    version: ${CSM_CONFIG_VERSION}
     namespace: services
 EOF
 
@@ -174,12 +182,23 @@ manifestgen -c "${workdir}/customizations.yaml" -i "${workdir}/manifest.yaml" -o
 # Deploy chart.
 loftsman ship --manifest-path "${workdir}/deploy-hotfix.yaml"
 
+# Update sysmgmt chart.
+kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' > "${workdir}/sysmgmt.yaml"
+yq w -i  "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).version' "${CSM_CONFIG_VERSION}"
+loftsman ship --manifest-path "${workdir}/sysmgmt.yaml"
+
+# Update cray-product-catalog
+kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' > "${workdir}/cpc.yaml"
+yq eval -i ".\"1.4.4\".configuration.commit = \"${CSM_CONFIG_COMMIT}\"" "${workdir}/cpc.yaml"
+yq eval -i ".\"1.4.4\".configuration.import_branch = \"${CSM_CONFIG_VERSION}\"" "${workdir}/cpc.yaml"
+loftsman ship --manifest-path "${workdir}/cpc.yaml"
+
 ### Update CFS configuration START ###
 load-cfs-config-util
 
-cfs-config-util update-configs --product csm \
+cfs-config-util update-configs --product "csm:${CSM_RELEASE}" \
   --playbook ncn_nodes.yml \
-  --playbook ncn-initrd.yml \
+  --playbook ncn-initrd.yml \s
   --base-query role=management \
   --save \
   --create-backups \
