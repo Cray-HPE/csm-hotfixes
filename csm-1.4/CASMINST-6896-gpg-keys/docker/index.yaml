@@ -4,3 +4,5 @@ artifactory.algol60.net/csm-docker/stable:
   images:
     csm-config:
     - 1.15.30
+    cray-product-catalog-update:
+    - 1.8.3

@@ -125,13 +125,12 @@ else
   echo "DEBUG was set in environment, $workdir will not be cleaned up."
 fi
 
+# Clone the csm-config-management repo to get the latest commit
 mkdir -p "${workdir}/csm-config-management"
 PW=$(kubectl -n services get secret vcs-user-credentials -o jsonpath='{.data.vcs_password}' | base64 -d ; echo)
 git clone "https://crayvcs:${PW}@api-gw-service-nmn.local/vcs/cray/csm-config-management.git" "${workdir}/csm-config-management"
 CSM_CONFIG_COMMIT=$(git -C "${workdir}/csm-config-management" rev-parse "origin/cray/csm/${CSM_CONFIG_VERSION}")
 
-# Clone the csm-config-management repo to get the latest commit
-git clone 
 # Update the kubernetes secret with our new GPG key if it's not already present
 NEW_KEY_PATH="${ROOT_DIR}/keys/${GPG_KEY_FILE_NAME}"
 NEW_KEY_SIGNATURE="$(gpg --list-packets "${NEW_KEY_PATH}")"
@@ -189,8 +188,10 @@ loftsman ship --manifest-path "${workdir}/sysmgmt.yaml"
 
 # Update cray-product-catalog
 kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' > "${workdir}/cpc.yaml"
-yq eval -i ".\"1.4.4\".configuration.commit = \"${CSM_CONFIG_COMMIT}\"" "${workdir}/cpc.yaml"
-yq eval -i ".\"1.4.4\".configuration.import_branch = \"${CSM_CONFIG_VERSION}\"" "${workdir}/cpc.yaml"
+yq eval -i ".\"${CSM_RELEASE}\".configuration.commit = \"${CSM_CONFIG_COMMIT}\"" "${workdir}/cpc.yaml"
+yq eval -i ".\"${CSM_RELEASE}\".configuration.import_branch = \"cray/csm/${CSM_CONFIG_VERSION}\"" "${workdir}/cpc.yaml"
+
+manifestgen -c "${workdir}/customizations.yaml" -i "${workdir}/manifest.yaml" -o "${workdir}/deploy-hotfix.yaml"
 loftsman ship --manifest-path "${workdir}/cpc.yaml"
 
 ### Update CFS configuration START ###
