@@ -29,7 +29,7 @@ source "${ROOT_DIR}/lib/version.sh"
 source "${ROOT_DIR}/lib/install.sh"
 
 GPG_KEY_FILE_NAME=hpe-signing-key-fips.asc
-CSM_CONFIG_VERSION="1.15.30"
+CSM_CONFIG_VERSION="1.15.31"
 
 function usage {
 
@@ -184,14 +184,14 @@ loftsman ship --manifest-path "${workdir}/deploy-hotfix.yaml"
 # Update sysmgmt chart.
 kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' >"${workdir}/sysmgmt.yaml"
 yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).version' "${CSM_CONFIG_VERSION}"
-loftsman ship --manifest-path "${workdir}/sysmgmt.yaml"
+kubectl -n loftsman create cm loftsman-sysmgmt --from-file=manifest.yaml="${workdir}/sysmgmt.yaml" -o yaml --dry-run=client | kubectl apply -f -
 
 CPC_VERSION="1.8.3"
 podman run --rm --name ncn-cpc \
   --user root \
   -e PRODUCT=csm \
   -e PRODUCT_VERSION=${CSM_RELEASE} \
-  -e YAML_CONTENT_STRING=\"{"configuration": {"commit": \"${CSM_CONFIG_COMMIT}\","import_branch": \"cray/csm/${CSM_CONFIG_VERSION}\"}}\" \
+  -e YAML_CONTENT_STRING="{\"configuration\": {\"commit\": \"${CSM_CONFIG_COMMIT}\", \"import_branch\": \"cray/csm/${CSM_CONFIG_VERSION}\"}}" \
   -e KUBECONFIG=/.kube/admin.conf \
   -e VALIDATE_SCHEMA=\"true\" \
   -v /etc/kubernetes:/.kube:ro \
