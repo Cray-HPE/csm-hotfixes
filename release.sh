@@ -19,6 +19,7 @@ export PACKAGING_TOOLS_IMAGE=${PACKAGING_TOOLS_IMAGE:-artifactory.algol60.net/ds
 export RPM_TOOLS_IMAGE=${RPM_TOOLS_IMAGE:-artifactory.algol60.net/dst-docker-mirror/internal-docker-stable-local/rpm-tools:1.0.0}
 export SKOPEO_IMAGE=${SKOPEO_IMAGE:-artifactory.algol60.net/dst-docker-mirror/quay-remote/skopeo/stable:v1.13.2}
 export CRAY_NEXUS_SETUP_IMAGE=${CRAY_NEXUS_SETUP_IMAGE:-artifactory.algol60.net/csm-docker/stable/cray-nexus-setup:0.7.1}
+export CFS_CONFIG_UTIL_IMAGE=${CFS_CONFIG_UTIL_IMAGE:-arti.hpc.amslabs.hpecorp.net/csm-docker-remote/stable/cfs-config-util:5.0.0}
 
 # code to store credentials in environment variable
 if [ ! -z "$ARTIFACTORY_USER" ] && [ ! -z "$ARTIFACTORY_TOKEN" ]; then
@@ -111,6 +112,10 @@ while [[ $# -gt 0 ]]; do
     echo "Vendoring rpmtools image in distribution"
     vendor-install-deps --no-skopeo --no-cray-nexus-setup --include-rpm-tools "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
   fi
+
+  # Vendor cfs-config-util image to update CFS configurations
+  echo "Vendoring cfs-config-util image in distribution"
+  vendor-install-deps --no-skopeo --no-cray-nexus-setup --include-cfs-config-util "$(basename "$BUILDDIR")" "${BUILDDIR}/vendor"
 
   # Package the distribution into an archive
   echo "Generating distribution tarball"
