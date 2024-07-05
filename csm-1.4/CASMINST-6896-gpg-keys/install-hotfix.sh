@@ -198,6 +198,7 @@ podman run --rm --name ncn-cpc \
   registry.local/artifactory.algol60.net/csm-docker/stable/cray-product-catalog-update:${CPC_VERSION}
 
 ### Update CFS configuration START ###
+export CFS_CONFIG_UTIL_IMAGE=${CFS_CONFIG_UTIL_IMAGE:-cfs-config-util:5.0.0}
 load-cfs-config-util
 
 cfs-config-util update-configs --product "csm:${CSM_RELEASE}" \
