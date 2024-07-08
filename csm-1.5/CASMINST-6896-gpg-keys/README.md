@@ -6,12 +6,12 @@ This hotfix imports a new HPE GPG key for newer product packages into an environ
 - Updates the Kubernetes hpe-signing-keys secret with the new key
 - Deploys a new `csm-config` for baking the key into NCN image builds and to ensure the key is imported during node personalization as an extra precaution
 - Updates cray-product-catalog
-- Updates CFS configurations for NCN's
+- Updates CFS configurations for NCNs
 - Builds new NCN images with the new GPG key baked in
 
-## JIRA(s)
+## JIRA
 
-This hotfix covers the following JIRA(s):
+This hotfix covers the following JIRA:
 
 * [CASMINST-6896](https://jira-pro.it.hpe.com:8443/browse/CASMTRIAGE-6896)
 

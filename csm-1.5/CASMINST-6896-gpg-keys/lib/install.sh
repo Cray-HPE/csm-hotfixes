@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2020,2022 Hewlett Packard Enterprise Development LP
+# Copyright 2020,2022,2024 Hewlett Packard Enterprise Development LP
 
 # Defaults
 : "${NEXUS_URL:="https://packages.local"}"
