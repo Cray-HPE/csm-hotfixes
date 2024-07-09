@@ -1,6 +1,6 @@
 # CSM 1.4 HPE GPG Keys
 
-This hotfix imports a new HPE GPG key for newer product packages into an environment running 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4
+This hotfix imports a new HPE GPG key for newer product packages into an environment running 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4.
 
 - Import the GPG key into the running NCNs
 - Updates the Kubernetes hpe-signing-keys secret with the new key

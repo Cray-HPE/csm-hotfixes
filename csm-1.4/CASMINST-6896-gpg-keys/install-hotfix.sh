@@ -22,7 +22,7 @@
 #  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #  OTHER DEALINGS IN THE SOFTWARE.
 #
-set -e
+set -euo pipefail
 
 ROOT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 GPG_KEY_FILE_NAME="hpe-signing-key-fips.asc"
