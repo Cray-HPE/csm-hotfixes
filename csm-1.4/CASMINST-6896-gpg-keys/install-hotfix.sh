@@ -121,27 +121,27 @@ unset PW
 [ -z "$CSM_CONFIG_COMMIT" ] && { echo >&2 "Failed to retrieve the latest commit from csm-config branch cray/csm/${CSM_CONFIG_VERSION}. Aborting."; exit 1; }
 
 # Update the kubernetes secret with our new GPG key if the new key isn't present
+KUBERNETES_SECRET="${KUBERNETES_SECRET:-hpe-signing-key}"
 NEW_KEY_PATH="${ROOT_DIR}/keys/${GPG_KEY_FILE_NAME}"
 NEW_KEY_SIGNATURE="$(gpg --list-packets "${NEW_KEY_PATH}")"
 NEW_KEY_ENCODED="$(base64 -w 0 "${NEW_KEY_PATH}")"
-mapfile -t EXISTING_K8S_KEYS < <(kubectl -n services get secret hpe-signing-key -o jsonpath='{.data}' | jq -r 'keys[]')
+mapfile -t EXISTING_K8S_KEYS < <(kubectl -n services get secret ${KUBERNETES_SECRET} -o jsonpath='{.data}' | jq -r 'keys[]')
 
 KEY_PRESENT=0
 for key in "${EXISTING_K8S_KEYS[@]}"; do
-  EXISTING_KEY_SIGNATURE="$(kubectl -n services get secret hpe-signing-key -o jsonpath="{.data.${key/./\\.}}" | base64 -d | gpg --list-packets)"
+  EXISTING_KEY_SIGNATURE="$(kubectl -n services get secret ${KUBERNETES_SECRET} -o jsonpath="{.data.${key/./\\.}}" | base64 -d | gpg --list-packets)"
 
   if [ "${EXISTING_KEY_SIGNATURE}" = "${NEW_KEY_SIGNATURE}" ]; then
-    echo "Key ${key} is already present in the secret. Refusing to add it again."
     KEY_PRESENT=1
     break
   fi
 done
 
 if [ "${KEY_PRESENT}" -eq 0 ]; then
-  echo "Key ${key} is not present, adding it to the secret: hpe-signing-key"
-  kubectl patch secret hpe-signing-key -n services -p="{\"data\":{\"${GPG_KEY_FILE_NAME}\":\"${NEW_KEY_ENCODED}\"}}"
+  echo "Key $GPG_KEY_FILE_NAME is not present, adding it to the secret: ${KUBERNETES_SECRET}"
+  kubectl patch secret "${KUBERNETES_SECRET}" -n services -p="{\"data\":{\"${GPG_KEY_FILE_NAME}\":\"${NEW_KEY_ENCODED}\"}}"
 else
-    echo "Key ${key} was already present in Kubernetes secret: ${kubernetes_secret}"
+    echo "Key ${GPG_KEY_FILE_NAME} was already present in Kubernetes secret: ${KUBERNETES_SECRET}"
 fi
 
 # Create new manifest.
