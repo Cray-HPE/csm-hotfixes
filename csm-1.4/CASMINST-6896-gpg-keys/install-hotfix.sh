@@ -140,6 +140,8 @@ done
 if [ "${KEY_PRESENT}" -eq 0 ]; then
   echo "Key ${key} is not present, adding it to the secret: hpe-signing-key"
   kubectl patch secret hpe-signing-key -n services -p="{\"data\":{\"${GPG_KEY_FILE_NAME}\":\"${NEW_KEY_ENCODED}\"}}"
+else
+    echo "Key ${key} was already present in Kubernetes secret: ${kubernetes_secret}"
 fi
 
 # Create new manifest.
@@ -172,7 +174,7 @@ loftsman ship --manifest-path "${workdir}/deploy-hotfix.yaml"
 
 # Update sysmgmt chart.
 kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' >"${workdir}/sysmgmt.yaml"
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).version' "${CSM_CONFIG_VERSION}"
+yq4 eval -i '.spec.charts.(name==csm-config).version = "'"${CSM_CONFIG_VERSION}"'"' "${workdir}/sysmgmt.yaml"
 kubectl -n loftsman create cm loftsman-sysmgmt --from-file=manifest.yaml="${workdir}/sysmgmt.yaml" -o yaml --dry-run=client | kubectl apply -f -
 
 # Update cray-product-catalog
