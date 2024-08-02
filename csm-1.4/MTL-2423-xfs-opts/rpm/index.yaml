@@ -1,0 +1,7 @@
+https://artifactory.algol60.net/artifactory/csm-rpms/hpe/stable/sle-15sp4:
+  rpms:
+    - dracut-metal-mdsquash-2.3.2-1.noarch
+# This is commented out because the hotfix build clobbers objects with the same name.
+#https://artifactory.algol60.net/artifactory/csm-rpms/hpe/stable/sle-15sp3:
+#  rpms:
+#    - dracut-metal-mdsquash-2.3.2-1.noarch
