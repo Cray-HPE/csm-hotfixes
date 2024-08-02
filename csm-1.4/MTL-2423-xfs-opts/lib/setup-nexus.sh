@@ -195,7 +195,6 @@ fi
 skopeo-sync "${ROOTDIR}/docker"
 nexus-upload helm "${ROOTDIR}/helm" "${CHARTS_REPO:-"charts"}"
 
-
 clean-install-deps
 
 cat >&2 << EOF

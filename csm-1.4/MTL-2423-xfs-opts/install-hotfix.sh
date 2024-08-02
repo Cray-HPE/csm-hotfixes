@@ -107,14 +107,8 @@ fi
 workdir="$(mktemp -d)"
 [ -z "${DEBUG:-}" ] && trap 'rm -fr '"${workdir}"'' ERR INT EXIT RETURN || echo "DEBUG was set in environment, $workdir will not be cleaned up."
 
-# Set credentials for the VCS
-PW=$(kubectl -n services get secret vcs-user-credentials -o jsonpath='{.data.vcs_password}' | base64 -d)
-
-# Fetch the latest commit from the specified branch
-CSM_CONFIG_COMMIT=$(git ls-remote "https://crayvcs:${PW}@api-gw-service-nmn.local/vcs/cray/csm-config-management.git" "refs/heads/cray/csm/${CSM_CONFIG_VERSION}" | awk '{print $1}')
-unset PW
-
-[ -z "$CSM_CONFIG_COMMIT" ] && { echo >&2 "Failed to retrieve the latest commit from csm-config branch cray/csm/${CSM_CONFIG_VERSION}. Aborting."; exit 1; }
+# Load artifacts into nexus
+"${ROOT_DIR}/lib/setup-nexus.sh"
 
 # Create new manifest.
 cat >"${workdir}/manifest.yaml" <<EOF
@@ -138,11 +132,17 @@ EOF
 kubectl -n loftsman get secret site-init -o jsonpath='{.data.customizations\.yaml}' | base64 -d >"${workdir}/customizations.yaml"
 manifestgen -c "${workdir}/customizations.yaml" -i "${workdir}/manifest.yaml" -o "${workdir}/deploy-hotfix.yaml"
 
-# Load artifacts into nexus
-"${ROOT_DIR}/lib/setup-nexus.sh"
-
 # Deploy chart.
 loftsman ship --manifest-path "${workdir}/deploy-hotfix.yaml"
+
+# Set credentials for the VCS
+PW=$(kubectl -n services get secret vcs-user-credentials -o jsonpath='{.data.vcs_password}' | base64 -d)
+
+# Fetch the latest commit from the specified branch
+CSM_CONFIG_COMMIT=$(git ls-remote "https://crayvcs:${PW}@api-gw-service-nmn.local/vcs/cray/csm-config-management.git" "refs/heads/cray/csm/${CSM_CONFIG_VERSION}" | awk '{print $1}')
+unset PW
+
+[ -z "$CSM_CONFIG_COMMIT" ] && { echo >&2 "Failed to retrieve the latest commit from csm-config branch cray/csm/${CSM_CONFIG_VERSION}. Aborting."; exit 1; }
 
 # Update sysmgmt chart.
 kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' >"${workdir}/sysmgmt.yaml"
