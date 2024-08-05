@@ -35,3 +35,7 @@ This hotfix is two-fold; fix the running NCNs, and rebuild images for
     ```bash
     ./install-hotfix.sh -b
     ```
+
+At this point, the cray-product-catalog is now updated to use the new csm-config as well as all CSM layers in all CFS configurations.
+
+Administrators can now rebuild images against their desired CFS configuration to pickup the hotfix changes. This must be done before the next node rebuild.
