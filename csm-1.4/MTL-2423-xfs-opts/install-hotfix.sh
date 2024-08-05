@@ -170,8 +170,7 @@ cfs-config-util update-configs --product "csm:${CSM_RELEASE}" \
   --base-query role=management \
   --save \
   --create-backups \
-  --clear-error \
-  "$@"
+  --clear-error
 
 rc=$?
 
