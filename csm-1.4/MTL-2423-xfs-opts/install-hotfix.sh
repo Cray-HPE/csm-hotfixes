@@ -136,18 +136,18 @@ kubectl -n loftsman get secret site-init -o jsonpath='{.data.customizations\.yam
 manifestgen -c "${workdir}/customizations.yaml" -i "${workdir}/manifest.yaml" -o "${workdir}/deploy-hotfix.yaml"
 loftsman ship --manifest-path "${workdir}/deploy-hotfix.yaml"
 
+# Update sysmgmt chart.
+echo "Updating sysmgmt configmap to use csm-config:${CSM_CONFIG_VERSION} ... "
+kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' >"${workdir}/sysmgmt.yaml"
+yq4 eval -i '(.spec.charts[] | select(.name == "csm-config") | .version) = "'"$CSM_CONFIG_VERSION"'"' "${workdir}/sysmgmt.yaml"
+kubectl -n loftsman create cm loftsman-sysmgmt --from-file=manifest.yaml="${workdir}/sysmgmt.yaml" -o yaml --dry-run=client | kubectl apply -f -
+
 # Set credentials for the VCS
 PW=$(kubectl -n services get secret vcs-user-credentials -o jsonpath='{.data.vcs_password}' | base64 -d)
 # Fetch the latest commit from the specified branch
 CSM_CONFIG_COMMIT=$(git ls-remote "https://crayvcs:${PW}@api-gw-service-nmn.local/vcs/cray/csm-config-management.git" "refs/heads/cray/csm/${CSM_CONFIG_VERSION}" | awk '{print $1}')
 unset PW
 [ -z "$CSM_CONFIG_COMMIT" ] && { echo >&2 "Failed to retrieve the latest commit from csm-config branch cray/csm/${CSM_CONFIG_VERSION}. Aborting."; exit 1; }
-
-# Update sysmgmt chart.
-echo "Updating sysmgmt configmap to use csm-config:${CSM_CONFIG_VERSION} ... "
-kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' >"${workdir}/sysmgmt.yaml"
-yq4 eval -i '.spec.charts.(name==csm-config).version = "'"${CSM_CONFIG_VERSION}"'"' "${workdir}/sysmgmt.yaml"
-kubectl -n loftsman create cm loftsman-sysmgmt --from-file=manifest.yaml="${workdir}/sysmgmt.yaml" -o yaml --dry-run=client | kubectl apply -f -
 
 echo "Updating cray-product-catalog ... "
 CPC_VERSION="1.8.3"
