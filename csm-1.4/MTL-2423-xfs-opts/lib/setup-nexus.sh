@@ -129,6 +129,8 @@ for repository_group in "${REPO_GROUPS[@]}"; do
     error=1
     break
   fi
+  yq4 eval '(.name="'"$repository_group"'"' "${ROOTDIR}/nexus-repositories-group.template.yaml" > "${ROOTDIR}/nexus-repository-group.yaml"
+  nexus-delete-repo "$repository_group"
   for encoded_repository in $(jq -r '.[] | @base64' <(echo "$repositories")); do
     repository="$(echo "$encoded_repository" | base64 --decode)"
     echo "Working on repository: $repository"
@@ -171,21 +173,24 @@ for repository_group in "${REPO_GROUPS[@]}"; do
 
     createrepo "$repository"
 
-    nexus-delete-repo "$repository_group"
     nexus-delete-repo "$repository"
 
     export repository
     # shellcheck disable=SC2016
-    envsubst '$repository_group_name' '$repository' < "${ROOTDIR}/nexus-repositories.template.yaml" > "${ROOTDIR}/nexus-repositories.yaml"
 
-    echo "Creating repository [$repository] and repository group [$repository] ... "
-    nexus-setup repositories "${ROOTDIR}/nexus-repositories.yaml"
+    yq4 eval -i '.group.memberNames +="'"$repository"'"' "${ROOTDIR}/nexus-repository-group.yaml"
+    yq4 eval '.name="'"$repository"'"' "${ROOTDIR}/nexus-repository.template.yaml" > "${ROOTDIR}/nexus-${repository}-repository.yaml"
+
+    echo "Creating repository [$repository] ... "
+    nexus-setup repositories "${ROOTDIR}/nexus-${repository}-repository.yaml"
 
     echo "Uploading artifacts ... "
     nexus-upload raw "$repository/" "$repository"
     nexus-wait-for-rpm-repomd "$repository"
 
   done
+  echo "Creating repository group [$repository_group] ... "
+  nexus-setup repositories "${ROOTDIR}/nexus-repository-group.yaml"
 done
 if [ "$error" -ne 0 ]; then
   exit 1

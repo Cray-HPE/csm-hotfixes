@@ -5,20 +5,9 @@ format: raw
 yum:
   repodataDepth: 0
   deployPolicy: STRICT
-name: $repository
+name:
 online: true
 storage:
   blobStoreName: default
   strictContentTypeValidation: false
   writePolicy: ALLOW_ONCE
----
-name: $repo_group_name
-format: raw
-storage:
-  blobStoreName: csm
-  strictContentTypeValidation: false
-type: group
-online: true
-group:
-  memberNames:
-    - $repository

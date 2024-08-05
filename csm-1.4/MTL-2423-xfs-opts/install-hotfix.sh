@@ -60,33 +60,36 @@ while getopts ":b" o; do
 done
 shift $((OPTIND - 1))
 
-if [ -f /etc/pit-release ]; then
-  echo >&2 'Can not run this hotfix on the PIT node'
-  exit 1
-else
-  readarray -t EXPECTED_NCNS < <(grep -oP 'ncn-[mws]\d+' /etc/hosts | sort -u)
-  if [ ${#EXPECTED_NCNS[@]} = 0 ]; then
-    echo >&2 "No NCNs found in /etc/hosts! This NCN is not initialized, /etc/hosts should have content."
-    exit 1
-  fi
-fi
-
-export NCNS=()
-for ncn in "${EXPECTED_NCNS[@]}"; do
-  if ping -c 1 "$ncn" >/dev/null 2>&1; then
-    NCNS+=("$ncn")
-  else
-    echo >&2 "Failed to ping [$ncn]; skipping hotfix for [$ncn]"
-  fi
-done
-
-function patch_running_ncns {
-  PDSH_SSH_ARGS_APPEND="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" pdsh -S -b -w "$(printf '%s,' "${NCNS[@]}")" '
-    sed -i'\''.bak'\'' -E '\''s/(xfs\s+)[a-zA-Z0-9,=]+/\1defaults/'\'' /etc/fstab.metal
-  ' || { echo >&2 'Failed to import the new HPE GPG key on one or more nodes!'; return 1; }
-}
-
 if [ "$build_images" -ne 1 ]; then
+  if [ -f /etc/pit-release ]; then
+    echo >&2 'Can not run this hotfix on the PIT node'
+    exit 1
+  else
+    readarray -t EXPECTED_NCNS < <(grep -oP 'ncn-[mws]\d+' /etc/hosts | sort -u)
+    if [ ${#EXPECTED_NCNS[@]} = 0 ]; then
+      echo >&2 "No NCNs found in /etc/hosts! This NCN is not initialized, /etc/hosts should have content."
+      exit 1
+    fi
+  fi
+
+  echo "Detecting reachable NCNs ... "
+  export NCNS=()
+  for ncn in "${EXPECTED_NCNS[@]}"; do
+    if ping -c 1 "$ncn" >/dev/null 2>&1; then
+      NCNS+=("$ncn")
+      echo "$ncn - reachable"
+    else
+      echo >&2 "Failed to ping [$ncn]; skipping hotfix for [$ncn]"
+    fi
+  done
+  echo "${#NCNS[@]} of ${#EXPECTED_NCNS[@]} were reachable. Continuing for ${#NCNS[@]}"
+  function patch_running_ncns {
+    PDSH_SSH_ARGS_APPEND="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" pdsh -S -b -w "$(printf '%s,' "${NCNS[@]}")" '
+      sed -i'\''.bak'\'' -E '\''s/(xfs\s+)[a-zA-Z0-9,=]+/\1defaults/'\'' /etc/fstab.metal
+    ' || { echo >&2 'Failed to import the new HPE GPG key on one or more nodes!'; return 1; }
+  }
+
+  echo "Applying the hotfix to ${#NCNS[@]} NCNs ..."
   patch_running_ncns || { echo >&2 'Aborting! See previous output for errors.'; exit 1; }
   cat << EOF
 Please commence a rolling reboot of the NCNs to activate the hotfix.
@@ -106,11 +109,13 @@ fi
 
 workdir="$(mktemp -d)"
 [ -z "${DEBUG:-}" ] && trap 'rm -fr '"${workdir}"'' ERR INT EXIT RETURN || echo "DEBUG was set in environment, $workdir will not be cleaned up."
+echo "Applying hotfix: $RELEASE_NAME"
+echo "Using temp area: $workdir"
 
-# Load artifacts into nexus
+echo "Loading artifacts into Nexus ... "
 "${ROOT_DIR}/lib/setup-nexus.sh"
 
-# Create new manifest.
+echo "Deploying csm-config:$CSM_CONFIG_VERSION... "
 cat >"${workdir}/manifest.yaml" <<EOF
 apiVersion: manifests/v1beta1
 metadata:
@@ -127,29 +132,24 @@ spec:
     version: ${CSM_CONFIG_VERSION}
     namespace: services
 EOF
-
-# Merge manifest.
 kubectl -n loftsman get secret site-init -o jsonpath='{.data.customizations\.yaml}' | base64 -d >"${workdir}/customizations.yaml"
 manifestgen -c "${workdir}/customizations.yaml" -i "${workdir}/manifest.yaml" -o "${workdir}/deploy-hotfix.yaml"
-
-# Deploy chart.
 loftsman ship --manifest-path "${workdir}/deploy-hotfix.yaml"
 
 # Set credentials for the VCS
 PW=$(kubectl -n services get secret vcs-user-credentials -o jsonpath='{.data.vcs_password}' | base64 -d)
-
 # Fetch the latest commit from the specified branch
 CSM_CONFIG_COMMIT=$(git ls-remote "https://crayvcs:${PW}@api-gw-service-nmn.local/vcs/cray/csm-config-management.git" "refs/heads/cray/csm/${CSM_CONFIG_VERSION}" | awk '{print $1}')
 unset PW
-
 [ -z "$CSM_CONFIG_COMMIT" ] && { echo >&2 "Failed to retrieve the latest commit from csm-config branch cray/csm/${CSM_CONFIG_VERSION}. Aborting."; exit 1; }
 
 # Update sysmgmt chart.
+echo "Updating sysmgmt configmap to use csm-config:${CSM_CONFIG_VERSION} ... "
 kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' >"${workdir}/sysmgmt.yaml"
 yq4 eval -i '.spec.charts.(name==csm-config).version = "'"${CSM_CONFIG_VERSION}"'"' "${workdir}/sysmgmt.yaml"
 kubectl -n loftsman create cm loftsman-sysmgmt --from-file=manifest.yaml="${workdir}/sysmgmt.yaml" -o yaml --dry-run=client | kubectl apply -f -
 
-# Update cray-product-catalog
+echo "Updating cray-product-catalog ... "
 CPC_VERSION="1.8.3"
 podman run --rm --name ncn-cpc \
   --user root \
@@ -161,7 +161,7 @@ podman run --rm --name ncn-cpc \
   -v /etc/kubernetes:/.kube:ro \
   "registry.local/artifactory.algol60.net/csm-docker/stable/cray-product-catalog-update:${CPC_VERSION}"
 
-### Update CFS configuration ###
+echo "Updating CFS configuration ... "
 load-cfs-config-util
 
 cfs-config-util update-configs --product "csm:${CSM_RELEASE}" \
@@ -182,6 +182,7 @@ fi
 
 clean-install-deps
 
+echo "Apply new CSM configuration ... "
 # Update the CFS configuration, but do not run it against the NCNs
 /usr/share/doc/csm/scripts/operations/configuration/apply_csm_configuration.sh \
   --no-enable --config-name "management-${CSM_RELEASE}"
@@ -205,6 +206,7 @@ TSTAMP=$(date "+%Y%m%d%H%M%S")
 K8S_CFS_SESSION_NAME="management-k8s-${CSM_RELEASE}-${TSTAMP}"
 CEPH_CFS_SESSION_NAME="management-ceph-${CSM_RELEASE}-${TSTAMP}"
 
+echo "Build new images ... "
 cray cfs sessions create \
   --target-group Management_Master \
   "$KUBERNETES_IMAGE_ID" \
