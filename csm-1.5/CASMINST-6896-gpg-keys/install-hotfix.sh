@@ -111,15 +111,6 @@ fi
 workdir="$(mktemp -d)"
 [ -z "${DEBUG:-}" ] && trap 'rm -fr '"${workdir}"'' ERR INT EXIT RETURN || echo "DEBUG was set in environment, $workdir will not be cleaned up."
 
-# Set credentials for the VCS
-PW=$(kubectl -n services get secret vcs-user-credentials -o jsonpath='{.data.vcs_password}' | base64 -d)
-
-# Fetch the latest commit from the specified branch
-CSM_CONFIG_COMMIT=$(git ls-remote "https://crayvcs:${PW}@api-gw-service-nmn.local/vcs/cray/csm-config-management.git" "refs/heads/cray/csm/${CSM_CONFIG_VERSION}" | awk '{print $1}')
-unset PW
-
-[ -z "$CSM_CONFIG_COMMIT" ] && { echo >&2 "Failed to retrieve the latest commit from csm-config branch cray/csm/${CSM_CONFIG_VERSION}. Aborting."; exit 1; }
-
 # Update the kubernetes secret with our new GPG key if the new key isn't present
 KUBERNETES_SECRET="${KUBERNETES_SECRET:-hpe-signing-key}"
 NEW_KEY_PATH="${ROOT_DIR}/keys/${GPG_KEY_FILE_NAME}"
@@ -144,6 +135,9 @@ else
     echo "Key ${GPG_KEY_FILE_NAME} was already present in Kubernetes secret: ${KUBERNETES_SECRET}"
 fi
 
+# Load artifacts into nexus
+"${ROOT_DIR}/lib/setup-nexus.sh"
+
 # Create new manifest.
 cat >"${workdir}/manifest.yaml" <<EOF
 apiVersion: manifests/v1beta1
@@ -166,16 +160,22 @@ EOF
 kubectl -n loftsman get secret site-init -o jsonpath='{.data.customizations\.yaml}' | base64 -d >"${workdir}/customizations.yaml"
 manifestgen -c "${workdir}/customizations.yaml" -i "${workdir}/manifest.yaml" -o "${workdir}/deploy-hotfix.yaml"
 
-# Load artifacts into nexus
-"${ROOT_DIR}/lib/setup-nexus.sh"
-
 # Deploy chart.
 loftsman ship --manifest-path "${workdir}/deploy-hotfix.yaml"
 
 # Update sysmgmt chart.
 kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' >"${workdir}/sysmgmt.yaml"
-yq w -i "${workdir}/sysmgmt.yaml" 'spec.charts.(name==csm-config).version' "${CSM_CONFIG_VERSION}"
+yq4 eval '(.spec.charts[] | select(.name == "csm-config") | .version) = "'"$CSM_CONFIG_VERSION"'"' "${workdir}/sysmgmt.yaml"
 kubectl -n loftsman create cm loftsman-sysmgmt --from-file=manifest.yaml="${workdir}/sysmgmt.yaml" -o yaml --dry-run=client | kubectl apply -f -
+
+# Set credentials for the VCS
+PW=$(kubectl -n services get secret vcs-user-credentials -o jsonpath='{.data.vcs_password}' | base64 -d)
+
+# Fetch the latest commit from the specified branch
+CSM_CONFIG_COMMIT=$(git ls-remote "https://crayvcs:${PW}@api-gw-service-nmn.local/vcs/cray/csm-config-management.git" "refs/heads/cray/csm/${CSM_CONFIG_VERSION}" | awk '{print $1}')
+unset PW
+
+[ -z "$CSM_CONFIG_COMMIT" ] && { echo >&2 "Failed to retrieve the latest commit from csm-config branch cray/csm/${CSM_CONFIG_VERSION}. Aborting."; exit 1; }
 
 # Update cray-product-catalog
 CPC_VERSION="1.8.3"
