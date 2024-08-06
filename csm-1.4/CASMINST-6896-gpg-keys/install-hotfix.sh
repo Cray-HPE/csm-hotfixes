@@ -119,11 +119,11 @@ KUBERNETES_SECRET="${KUBERNETES_SECRET:-hpe-signing-key}"
 NEW_KEY_PATH="${ROOT_DIR}/keys/${GPG_KEY_FILE_NAME}"
 NEW_KEY_SIGNATURE="$(gpg --list-packets "${NEW_KEY_PATH}")"
 NEW_KEY_ENCODED="$(base64 -w 0 "${NEW_KEY_PATH}")"
-mapfile -t EXISTING_K8S_KEYS < <(kubectl -n services get secret ${KUBERNETES_SECRET} -o jsonpath='{.data}' | jq -r 'keys[]')
+mapfile -t EXISTING_K8S_KEYS < <(kubectl -n services get secret "${KUBERNETES_SECRET}" -o jsonpath='{.data}' | jq -r 'keys[]')
 
 KEY_PRESENT=0
 for key in "${EXISTING_K8S_KEYS[@]}"; do
-  EXISTING_KEY_SIGNATURE="$(kubectl -n services get secret ${KUBERNETES_SECRET} -o jsonpath="{.data.${key/./\\.}}" | base64 -d | gpg --list-packets)"
+  EXISTING_KEY_SIGNATURE="$(kubectl -n services get secret "${KUBERNETES_SECRET}" -o jsonpath="{.data.${key/./\\.}}" | base64 -d | gpg --list-packets)"
 
   if [ "${EXISTING_KEY_SIGNATURE}" = "${NEW_KEY_SIGNATURE}" ]; then
     KEY_PRESENT=1
@@ -215,11 +215,11 @@ clean-install-deps
   --no-enable --config-name "management-${CSM_RELEASE}"
 
 KUBERNETES_IMAGE_ID="$(kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' |
-  yq r -j - '"'${CSM_RELEASE}'".images' |
+  yq r -j - '"'"${CSM_RELEASE}"'".images' |
   jq -r '. as $o | keys_unsorted[] | select(startswith("secure-kubernetes")) | $o[.].id')"
 
 STORAGE_IMAGE_ID="$(kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' |
-  yq r -j - '"'${CSM_RELEASE}'".images' |
+  yq r -j - '"'"${CSM_RELEASE}"'".images' |
   jq -r '. as $o | keys_unsorted[] | select(startswith("secure-storage")) | $o[.].id')"
 
 if [ -z "$KUBERNETES_IMAGE_ID" ] || [ -z "$STORAGE_IMAGE_ID" ]; then
