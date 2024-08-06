@@ -18,8 +18,14 @@ This hotfix covers the following JIRAs:
 
 ## Usage
 
+> ***IMPORTANT*** This hotfix requires the CASMINST-6896-gpg-keys hotfix. **It is crucial that CASMINST-6896-gpg-keys is applied _before_ applying this hotfix**. Applying the hotfixes in the wrong order will require re-applying this MTL-2423-xfs-opts hotfix.
+
 This hotfix is two-fold; fix the running NCNs, and rebuild images for  
 
+1. Apply the CASMINST-6896-gpg-keys hotfix.
+
+> ***WARNING*** Skipping this step and applying CASMINST-6896-gpg-keys at a later time, after MTL-2423-xfs-opts, will require re-applying MTL-2423-xfs-opts.
+   
 1. Live patch the non-compute nodes.
 
     ```bash
