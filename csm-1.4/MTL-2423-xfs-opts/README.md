@@ -38,4 +38,6 @@ This hotfix is two-fold; fix the running NCNs, and rebuild images for
 
 At this point, the cray-product-catalog is now updated to use the new csm-config as well as all CSM layers in all CFS configurations.
 
-Administrators can now rebuild images against their desired CFS configuration to pickup the hotfix changes. This must be done before the next node rebuild.
+Administrators can now rebuild images against their desired CFS configuration to pickup the hotfix changes.
+See [Management Node Image Customization](https://github.com/Cray-HPE/docs-csm/blob/release/1.4/operations/configuration_management/Management_Node_Image_Customization.md) in the CSM documentation for more information.
+This must be done before the next node rebuild.
