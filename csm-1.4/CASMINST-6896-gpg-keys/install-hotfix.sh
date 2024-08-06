@@ -111,6 +111,9 @@ fi
 workdir="$(mktemp -d)"
 [ -z "${DEBUG:-}" ] && trap 'rm -fr '"${workdir}"'' ERR INT EXIT RETURN || echo "DEBUG was set in environment, $workdir will not be cleaned up."
 
+# Load artifacts into nexus
+"${ROOT_DIR}/lib/setup-nexus.sh"
+
 # Update the kubernetes secret with our new GPG key if the new key isn't present
 KUBERNETES_SECRET="${KUBERNETES_SECRET:-hpe-signing-key}"
 NEW_KEY_PATH="${ROOT_DIR}/keys/${GPG_KEY_FILE_NAME}"
@@ -134,9 +137,6 @@ if [ "${KEY_PRESENT}" -eq 0 ]; then
 else
     echo "Key ${GPG_KEY_FILE_NAME} was already present in Kubernetes secret: ${KUBERNETES_SECRET}"
 fi
-
-# Load artifacts into nexus
-"${ROOT_DIR}/lib/setup-nexus.sh"
 
 # Create new manifest.
 cat >"${workdir}/manifest.yaml" <<EOF
