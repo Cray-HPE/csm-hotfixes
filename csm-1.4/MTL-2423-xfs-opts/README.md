@@ -28,7 +28,7 @@ This hotfix is two-fold; fix the running NCNs, and rebuild images for
 
 1. Execute a rolling reboot of the non-compute nodes in order to apply the new XFS mount options.
 
-    Use the documentation in docs-csm for a rolling reboot.
+    See [Reboot NCNs](https://github.com/Cray-HPE/docs-csm/blob/release/1.4/operations/node_management/Reboot_NCNs.md) in the CSM documentation for instructions.
 
 1. After completing the rolling reboot, patch the NCN images.
 
