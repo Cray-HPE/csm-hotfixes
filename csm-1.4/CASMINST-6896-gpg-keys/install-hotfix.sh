@@ -111,25 +111,19 @@ fi
 workdir="$(mktemp -d)"
 [ -z "${DEBUG:-}" ] && trap 'rm -fr '"${workdir}"'' ERR INT EXIT RETURN || echo "DEBUG was set in environment, $workdir will not be cleaned up."
 
-# Set credentials for the VCS
-PW=$(kubectl -n services get secret vcs-user-credentials -o jsonpath='{.data.vcs_password}' | base64 -d)
-
-# Fetch the latest commit from the specified branch
-CSM_CONFIG_COMMIT=$(git ls-remote "https://crayvcs:${PW}@api-gw-service-nmn.local/vcs/cray/csm-config-management.git" "refs/heads/cray/csm/${CSM_CONFIG_VERSION}" | awk '{print $1}')
-unset PW
-
-[ -z "$CSM_CONFIG_COMMIT" ] && { echo >&2 "Failed to retrieve the latest commit from csm-config branch cray/csm/${CSM_CONFIG_VERSION}. Aborting."; exit 1; }
+# Load artifacts into nexus
+"${ROOT_DIR}/lib/setup-nexus.sh"
 
 # Update the kubernetes secret with our new GPG key if the new key isn't present
 KUBERNETES_SECRET="${KUBERNETES_SECRET:-hpe-signing-key}"
 NEW_KEY_PATH="${ROOT_DIR}/keys/${GPG_KEY_FILE_NAME}"
 NEW_KEY_SIGNATURE="$(gpg --list-packets "${NEW_KEY_PATH}")"
 NEW_KEY_ENCODED="$(base64 -w 0 "${NEW_KEY_PATH}")"
-mapfile -t EXISTING_K8S_KEYS < <(kubectl -n services get secret ${KUBERNETES_SECRET} -o jsonpath='{.data}' | jq -r 'keys[]')
+mapfile -t EXISTING_K8S_KEYS < <(kubectl -n services get secret "${KUBERNETES_SECRET}" -o jsonpath='{.data}' | jq -r 'keys[]')
 
 KEY_PRESENT=0
 for key in "${EXISTING_K8S_KEYS[@]}"; do
-  EXISTING_KEY_SIGNATURE="$(kubectl -n services get secret ${KUBERNETES_SECRET} -o jsonpath="{.data.${key/./\\.}}" | base64 -d | gpg --list-packets)"
+  EXISTING_KEY_SIGNATURE="$(kubectl -n services get secret "${KUBERNETES_SECRET}" -o jsonpath="{.data.${key/./\\.}}" | base64 -d | gpg --list-packets)"
 
   if [ "${EXISTING_KEY_SIGNATURE}" = "${NEW_KEY_SIGNATURE}" ]; then
     KEY_PRESENT=1
@@ -166,16 +160,22 @@ EOF
 kubectl -n loftsman get secret site-init -o jsonpath='{.data.customizations\.yaml}' | base64 -d >"${workdir}/customizations.yaml"
 manifestgen -c "${workdir}/customizations.yaml" -i "${workdir}/manifest.yaml" -o "${workdir}/deploy-hotfix.yaml"
 
-# Load artifacts into nexus
-"${ROOT_DIR}/lib/setup-nexus.sh"
-
 # Deploy chart.
 loftsman ship --manifest-path "${workdir}/deploy-hotfix.yaml"
 
 # Update sysmgmt chart.
 kubectl -n loftsman get cm loftsman-sysmgmt -o jsonpath='{.data.manifest\.yaml}' >"${workdir}/sysmgmt.yaml"
-yq4 eval -i '.spec.charts.(name==csm-config).version = "'"${CSM_CONFIG_VERSION}"'"' "${workdir}/sysmgmt.yaml"
+yq4 eval '(.spec.charts[] | select(.name == "csm-config") | .version) = "'"$CSM_CONFIG_VERSION"'"' "${workdir}/sysmgmt.yaml"
 kubectl -n loftsman create cm loftsman-sysmgmt --from-file=manifest.yaml="${workdir}/sysmgmt.yaml" -o yaml --dry-run=client | kubectl apply -f -
+
+# Set credentials for the VCS
+PW=$(kubectl -n services get secret vcs-user-credentials -o jsonpath='{.data.vcs_password}' | base64 -d)
+
+# Fetch the latest commit from the specified branch
+CSM_CONFIG_COMMIT=$(git ls-remote "https://crayvcs:${PW}@api-gw-service-nmn.local/vcs/cray/csm-config-management.git" "refs/heads/cray/csm/${CSM_CONFIG_VERSION}" | awk '{print $1}')
+unset PW
+
+[ -z "$CSM_CONFIG_COMMIT" ] && { echo >&2 "Failed to retrieve the latest commit from csm-config branch cray/csm/${CSM_CONFIG_VERSION}. Aborting."; exit 1; }
 
 # Update cray-product-catalog
 CPC_VERSION="1.8.3"
@@ -198,8 +198,7 @@ cfs-config-util update-configs --product "csm:${CSM_RELEASE}" \
   --base-query role=management \
   --save \
   --create-backups \
-  --clear-error \
-  "$@"
+  --clear-error
 
 rc=$?
 
@@ -216,11 +215,11 @@ clean-install-deps
   --no-enable --config-name "management-${CSM_RELEASE}"
 
 KUBERNETES_IMAGE_ID="$(kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' |
-  yq r -j - '"'${CSM_RELEASE}'".images' |
+  yq r -j - '"'"${CSM_RELEASE}"'".images' |
   jq -r '. as $o | keys_unsorted[] | select(startswith("secure-kubernetes")) | $o[.].id')"
 
 STORAGE_IMAGE_ID="$(kubectl -n services get cm cray-product-catalog -o jsonpath='{.data.csm}' |
-  yq r -j - '"'${CSM_RELEASE}'".images' |
+  yq r -j - '"'"${CSM_RELEASE}"'".images' |
   jq -r '. as $o | keys_unsorted[] | select(startswith("secure-storage")) | $o[.].id')"
 
 if [ -z "$KUBERNETES_IMAGE_ID" ] || [ -z "$STORAGE_IMAGE_ID" ]; then
