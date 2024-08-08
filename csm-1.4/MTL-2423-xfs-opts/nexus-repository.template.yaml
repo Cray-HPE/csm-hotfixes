@@ -1,0 +1,13 @@
+---
+cleanup: null
+type: hosted
+format: raw
+yum:
+  repodataDepth: 0
+  deployPolicy: STRICT
+name:
+online: true
+storage:
+  blobStoreName: default
+  strictContentTypeValidation: false
+  writePolicy: ALLOW_ONCE

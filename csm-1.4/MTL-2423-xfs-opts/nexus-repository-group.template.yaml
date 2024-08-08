@@ -1,0 +1,10 @@
+---
+name:
+format: raw
+storage:
+  blobStoreName: csm
+  strictContentTypeValidation: false
+type: group
+online: true
+group:
+  memberNames: []
