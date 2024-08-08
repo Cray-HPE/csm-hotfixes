@@ -1,0 +1,24 @@
+---
+cleanup: null
+type: hosted
+format: raw
+yum:
+  repodataDepth: 0
+  deployPolicy: STRICT
+name: $repository
+online: true
+storage:
+  blobStoreName: default
+  strictContentTypeValidation: false
+  writePolicy: ALLOW_ONCE
+---
+name: $group
+format: raw
+storage:
+  blobStoreName: csm
+  strictContentTypeValidation: false
+type: group
+online: true
+group:
+  memberNames:
+    - $repository
