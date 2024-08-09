@@ -1,0 +1,5 @@
+https://artifactory.algol60.net/artifactory/csm-helm-charts/stable:
+  charts:
+    cms-ipxe:
+    - 1.13.0
+
