@@ -135,7 +135,7 @@ spec:
     version: 1.9.3
     namespace: services
   - name: cray-bos
-    version: 2.0.43
+    version: 2.0.44-casmcms-9081-csm-1-4.2+b30e8ac
     namespace: services
     timeout: 10m
 EOF

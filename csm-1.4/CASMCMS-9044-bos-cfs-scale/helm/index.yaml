@@ -3,7 +3,9 @@ https://artifactory.algol60.net/artifactory/csm-helm-charts/stable:
   charts:
     cfs-hwsync-agent:
     - 1.9.3
-    cray-bos:
-    - 2.0.43
     cray-cfs-api:
     - 1.12.9
+https://artifactory.algol60.net/artifactory/csm-helm-charts/unstable:
+  charts:
+    cray-bos:
+    - 2.0.44-casmcms-9081-csm-1-4.2+b30e8ac

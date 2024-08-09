@@ -1,4 +1,7 @@
 https://artifactory.algol60.net/artifactory/csm-rpms/hpe/stable/sle-15sp3:
   rpms:
-    - bos-reporter-2.0.43-1.x86_64
     - craycli-0.74.3-1.x86_64
+
+https://artifactory.algol60.net/artifactory/csm-rpms/hpe/unstable/sle-15sp3:
+  rpms:
+    - bos-reporter-2.0.44-casmcms~9081~csm~1~4.2+b30e8ac.x86_64
