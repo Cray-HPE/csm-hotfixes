@@ -88,15 +88,24 @@ while [[ $# -gt 0 ]]; do
   rm -f "${BUILDDIR}/docker/index.yaml" "${BUILDDIR}/docker/transform.sh" "${BUILDDIR}/helm/index.yaml"
 
   # Sync RPMs (not supported)
-  if [[ -f "${HOTFIXDIR}/rpm/index.yaml" ]]; then
-    echo "Syncing RPM index"
-    rpm-sync "${HOTFIXDIR}/rpm/index.yaml" "${BUILDDIR}/rpm"
-  fi
+  if [[ -d "${HOTFIXDIR}/rpm" ]]; then
+    # Done in a sub-shell to avoid changing the global shopts
+    (
+      cd "${HOTFIXDIR}"
+      shopt -s globstar nullglob dotglob
+      for indexfile in rpm/**/index.yaml ; do
+        echo "Syncing RPM index ${indexfile}"
+        reldir=$(dirname "$indexfile")
+        rpm-sync "${indexfile}" "${BUILDDIR}/${reldir}"
+      done
 
-  if [[ -f "${HOTFIXDIR}/rpm/.createrepo" ]]; then
-    echo "Running createrepo on RPMs"
-    rm -f "${HOTFIXDIR}/rpm/.createrepo"
-    createrepo "${BUILDDIR}/rpm"
+      for repofile in rpm/**/.createrepo ; do
+        reldir=$(dirname "$repofile")
+        echo "Running createrepo on RPMs in ${reldir}"
+        rm -f "${repofile}"
+        createrepo "${BUILDDIR}/${reldir}"
+      done
+    )
   fi
 
   # Sync container images
