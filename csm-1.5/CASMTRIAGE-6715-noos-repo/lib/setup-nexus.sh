@@ -148,7 +148,7 @@ else
 fi
 
 printf 'Copying hotfix RPMs into downloaded repository %s ... ' "$repository"
-if rsync -rltDq "${ROOTDIR}/rpm/" "${ROOTDIR}/${repository}/"; then
+if rsync -rltDq --exclude index.yaml --exclude index.yml "${ROOTDIR}/rpm/" "${ROOTDIR}/${repository}/"; then
     echo 'Done'
 else
     echo 'Failed!'
