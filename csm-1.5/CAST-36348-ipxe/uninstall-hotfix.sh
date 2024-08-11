@@ -25,7 +25,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-CMS_IPXE_VERSION=1.13.0
+CMS_IPXE_VERSION='1.12.1'
 
 source "${ROOT_DIR}/lib/version.sh"
 source "${ROOT_DIR}/lib/install.sh"
@@ -36,14 +36,14 @@ echo "Loading artifacts into Nexus ... "
 # Create scratch space
 workdir="$(mktemp -d)"
 [ -z "${DEBUG:-}" ] && trap 'rm -fr '"${workdir}"'' ERR INT EXIT RETURN || echo "DEBUG was set in environment, $workdir will not be cleaned up."
-echo "Applying hotfix: $RELEASE_NAME"
+echo "Uninstalling hotfix: $RELEASE_NAME"
 echo "Using temp area: $workdir"
 
 # Build manifest
 cat > "${workdir}/manifest.yaml" << EOF
 apiVersion: manifests/v1beta1
 metadata:
-  name: cast-36348
+  name: cast-36348-uninstall
 spec:
   sources:
     charts:
@@ -68,6 +68,6 @@ kubectl -n loftsman create cm loftsman-sysmgmt --from-file=manifest.yaml="${work
 
 set +x
 cat >&2 <<EOF
-+ Hotfix installed
++ Hotfix uninstalled
 ${0##*/}: OK
 EOF
