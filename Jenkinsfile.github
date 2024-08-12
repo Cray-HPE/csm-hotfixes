@@ -42,14 +42,7 @@ pipeline {
           find . -maxdepth 4 -mindepth 4 -wholename '*/lib/version.sh' ! -wholename './.*' ! -wholename './vendor/*' | while read VERSION_SH; do
             RELEASE="$("$VERSION_SH")"
             FOLDER="$(basename "$(dirname "${VERSION_SH%/lib/version.sh}")")"
-
-            # For 1.5.0, leave hotfixes in the root folder, until we release 1.5.1
-            if [ "${FOLDER}" == "csm-1.5" ]; then
-              GCS_FILE="${GCS_PREFIX}/${RELEASE}.tar.gz"
-            else
-              GCS_FILE="${GCS_PREFIX}/${FOLDER}/${RELEASE}.tar.gz"
-            fi
-
+            GCS_FILE="${GCS_PREFIX}/${FOLDER}/${RELEASE}.tar.gz"
             echo "Looking for existing distribution ${GCS_FILE}"
             if gsutil -q stat "${GCS_FILE}"; then
               echo "Distribution already found for ${FOLDER}/${RELEASE}. Not rebuilding."
@@ -98,9 +91,9 @@ pipeline {
             touch dist/slack.txt
             while read VERSION_SH; do
               RELEASE="$("$VERSION_SH")"
-
+              FOLDER="$(basename "$(dirname "${VERSION_SH%/lib/version.sh}")")"
+              GCS_FILE="${GCS_PREFIX}/${FOLDER}/${RELEASE}.tar.gz"
               DIST_FILE="dist/${RELEASE}.tar.gz"
-              GCS_FILE="${GCS_PREFIX}/${RELEASE}.tar.gz"
 
               cd dist
               sha256sum ${RELEASE}.tar.gz > ${RELEASE}.tar.gz.sha256.txt
@@ -110,7 +103,7 @@ pipeline {
               gsutil cp ${DIST_FILE} ${GCS_FILE}
               gsutil cp ${DIST_FILE}.sha256.txt ${GCS_FILE}.sha256.txt
 
-              URL="https://storage.googleapis.com/csm-release-public/hotfix/${RELEASE}.tar.gz"
+              URL="https://storage.googleapis.com/csm-release-public/hotfix/${FOLDER}/${RELEASE}.tar.gz"
               echo "Hotfix available at"
               echo "${URL}"
 
