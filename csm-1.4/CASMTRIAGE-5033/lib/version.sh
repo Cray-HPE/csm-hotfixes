@@ -22,7 +22,7 @@
 #  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #  OTHER DEALINGS IN THE SOFTWARE.
 #
-: "${RELEASE:="${RELEASE_NAME:="csm-1.4.1-qlogic-hotfix"}-${RELEASE_VERSION:="3"}"}"
+: "${RELEASE:="${RELEASE_NAME:="csm-1.4.1-qlogic-hotfix"}-${RELEASE_VERSION:="4"}"}"
 
 # return if sourced
 return 0 2>/dev/null
