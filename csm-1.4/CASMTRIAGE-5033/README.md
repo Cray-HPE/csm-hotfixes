@@ -5,6 +5,27 @@ This procedure covers applying the hotfix for the QLogic kernel panics pertainin
 - Marvell 2P 25GbE SFP28 QL41232HQCU-HC OCP3 Adapter
 - Marvell FastLinQ 41000 Series - 2P 25GbE SFP28 QL41232HLCU-HC MD2 Adapter
 
+## What's included
+
+This hotfix strictly only backports the Marvell/QLogic Kernel driver from CSM V1.4.4 into earlier 1.4 releases.
+
+The complete fix for the Marvell/QLogic Kernel panic included other pieces that are not covered by this hotfix.
+
+However, the driver resolves the root cause of Kernel panics, a fault in the QLogic kernel driver's recovery mode that prevents a successful recovery of a network interface.
+
+The driver will address issues returning network devices to normal operations after an invalid exception occurs triggering the driver recovery flow.
+
+### What is not included
+
+The rest of the fix resolved issues that cascade from the crashing driver:
+
+- Blacklisting the QLogic RDMA kernel module `qedr` to remove an extraneous ingress in `/etc/dracut.conf.d/99-csm-ansible.conf`; a recommendation by Marvell
+    - Removal of `/etc/dracut.conf.d/fastlinq.conf` installed by the new driver, this forces the `qedr` module to load. 
+- Installing the `5.14.21-150400.24.100.2.27359.1.PTF.1215587` Kernel from SuSE; this removes an edge case that can occur when the QLogic driver crashes
+    - Updating `/etc/zypp/zypp.conf:multiversion.kernels` to match the new kernel version
+
+The changes listed above are included in CSM 1.4.4 and higher.  
+
 ## Prerequisites
 
 ## Setup
@@ -13,7 +34,7 @@ This procedure covers applying the hotfix for the QLogic kernel panics pertainin
 2. On that master node `untar` the tar and change into the CASMTIRAGE-5033 folder
 
    ```bash
-   cd csm-1.4.1-qlogic-hotfix-1
+   cd csm-1.4.1-qlogic-hotfix-4
    ```
 
 ## Execute the hotfix
