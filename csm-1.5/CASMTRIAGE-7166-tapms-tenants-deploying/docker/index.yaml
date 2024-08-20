@@ -1,0 +1,7 @@
+---
+artifactory.algol60.net/csm-docker/stable:
+  tls-verify: true
+  images:
+    cray-tapms-operator:
+    - v0.3.0-2
+
