@@ -31,10 +31,10 @@ The changes listed above are included in CSM 1.4.4 and higher.
 ## Setup
 
 1. Copy the tar to a master node.
-2. On that master node `untar` the tar and change into the CASMTIRAGE-5033 folder
+2. On that master node `untar` the tar and change into the CASMTRIAGE-5033 folder
 
    ```bash
-   cd csm-1.4.1-qlogic-hotfix-4
+   cd csm-1.4.1-qlogic-hotfix-5
    ```
 
 ## Execute the hotfix
