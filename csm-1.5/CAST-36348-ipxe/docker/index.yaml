@@ -1,7 +1,7 @@
-artifactory.algol60.net/csm-docker/stable:
+artifactory.algol60.net/csm-docker/unstable:
   tls-verify: true
   images:
     cray-bss-ipxe:
-    - 1.13.0
-
+    - 1.15.0-v1-12-1-debug.1_60aa0c4
+    - 1.15.0-v1-13-0-debug.1_904753f
 

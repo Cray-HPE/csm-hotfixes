@@ -25,7 +25,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-CMS_IPXE_VERSION=1.13.0
+CMS_IPXE_VERSION='1.15.0-v1-13-0-debug.1_904753f'
 
 source "${ROOT_DIR}/lib/version.sh"
 source "${ROOT_DIR}/lib/install.sh"
@@ -36,7 +36,7 @@ echo "Loading artifacts into Nexus ... "
 # Create scratch space
 workdir="$(mktemp -d)"
 [ -z "${DEBUG:-}" ] && trap 'rm -fr '"${workdir}"'' ERR INT EXIT RETURN || echo "DEBUG was set in environment, $workdir will not be cleaned up."
-echo "Applying hotfix: $RELEASE_NAME"
+echo "Applying hotfix: debug  $RELEASE_NAME"
 echo "Using temp area: $workdir"
 
 # Build manifest
