@@ -25,7 +25,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-CMS_IPXE_VERSION='1.15.0-v1-13-0-debug.1_904753f'
+CMS_IPXE_VERSION='1.15.0-v1-13-0-debug.1+904753f'
 
 source "${ROOT_DIR}/lib/version.sh"
 source "${ROOT_DIR}/lib/install.sh"
