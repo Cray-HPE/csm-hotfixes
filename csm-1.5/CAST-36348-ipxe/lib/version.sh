@@ -2,7 +2,7 @@
 
 # Copyright 2024 Hewlett Packard Enterprise Development LP
 
-: "${RELEASE:="${RELEASE_NAME:="csm-1.5-ipxe-backport"}-${RELEASE_VERSION:="3"}"}"
+: "${RELEASE:="${RELEASE_NAME:="csm-1.5-ipxe-backport"}-${RELEASE_VERSION:="4"}"}"
 
 # return if sourced
 return 0 2>/dev/null

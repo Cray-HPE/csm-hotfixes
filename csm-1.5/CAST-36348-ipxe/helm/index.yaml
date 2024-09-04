@@ -1,6 +1,6 @@
 https://artifactory.algol60.net/artifactory/csm-helm-charts/unstable:
   charts:
     cms-ipxe:
-    - 1.15.0-v1-12-1-debug.1+60aa0c4
-    - 1.15.0-v1-13-0-debug.1+904753f
+    - 1.15.0-v1-12-1-debug.2+a152543
+    - 1.15.0-v1-13-0-debug.2+0cdbf0f
 
