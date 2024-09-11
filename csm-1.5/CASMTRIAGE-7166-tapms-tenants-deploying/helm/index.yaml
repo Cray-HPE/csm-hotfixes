@@ -1,0 +1,7 @@
+---
+https://artifactory.algol60.net/artifactory/csm-helm-charts/stable:
+  charts:
+    cray-tapms-crd:
+    - 0.3.0-2
+    cray-tapms-operator:
+    - 0.3.0-2
