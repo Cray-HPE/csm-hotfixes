@@ -1,5 +1,7 @@
 # CSM 1.5.0 Tarball Noos Repository
 
+> **NOTE** This hotfix is superseded by CASMTRIAGE-7232's hotfix.
+  
 This hotfix is exclusive to the 1.5.0 fresh install. It is imperative to run this hotfix immediately following the extraction
 of the CSM tarball on the PIT. Specifically, after step 3 of section 2 in the [pre-installation](https://github.com/Cray-HPE/docs-csm/blob/release/1.5/install/pre-installation.md#2-download-and-extract-the-csm-tarball).
 
@@ -8,6 +10,8 @@ This hotfix will:
 * Recreate/update the repodata in the extracted tarball.
 
 After running this hotfix continue installation as usual.
+
+***IMPORTANT*** This hotfix does NOT fix a running system, its specifically targeted towards a fresh install. At the time of writing, there was no need for fixing a running system.
 
 ## JIRA(s)
 
