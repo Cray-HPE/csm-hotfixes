@@ -88,7 +88,7 @@ function update-disk-bootloaders {
       echo "BOOTRAID already mounted"
     fi
     BOOTRAID="$(lsblk -o MOUNTPOINT -nr /dev/disk/by-label/BOOTRAID)"
-    if grep -q "crashkernel=72M,low" "$BOOTRAID/boot/grub2/grub.cfg" && grep -q "crashkernel=360M,high" "$BOOTRAID/boot/grub2/grub.cfg"; then
+    if grep -q "crashkernel=72M,low" "$BOOTRAID/boot/grub2/grub.cfg" && grep -q "crashkernel=512M,high" "$BOOTRAID/boot/grub2/grub.cfg"; then
      echo "Expected crashkernel parameters are already present."
     else
       printf "Creating grub2 backup at %s ... " "$BOOTRAID/boot/grub2/grub.cfg"
@@ -98,7 +98,7 @@ function update-disk-bootloaders {
 
       sed -i -E "s/crashkernel=[0-9]+[a-zA-Z]?//g" "$BOOTRAID/boot/grub2/grub.cfg"
 
-      sed -i -E '\''s/(crashkernel=)[0-9]+[a-zA-Z]/\1360M,high \172M,low/'\'' "$BOOTRAID/boot/grub2/grub.cfg"
+      sed -i -E '\''s/(crashkernel=)[0-9]+[a-zA-Z]/\1512M,high \172M,low/'\'' "$BOOTRAID/boot/grub2/grub.cfg"
       echo "Done"
     fi
   ' 2>/dev/null | dshbak -c ; then
@@ -132,7 +132,7 @@ function update-bss() {
     printf "%-16s - Backing up BSS bootparameters to %s/%s.bss.backup.json ... " "${ncn_xname}" "${CURRENT_LOG_DIR}" "${ncn_xname}"
     cray bss bootparameters list --hosts "${ncn_xname}" --format json | jq '.[0]' > "${CURRENT_LOG_DIR}/${ncn_xname}.bss.backup.json"
     echo 'Done'
-    if grep -q 'crashkernel=72M,low' "${CURRENT_LOG_DIR}/${ncn_xname}.bss.backup.json" && grep -q 'crashkernel=360M,high' "${CURRENT_LOG_DIR}/${ncn_xname}.bss.backup.json"; then
+    if grep -q 'crashkernel=72M,low' "${CURRENT_LOG_DIR}/${ncn_xname}.bss.backup.json" && grep -q 'crashkernel=512M,high' "${CURRENT_LOG_DIR}/${ncn_xname}.bss.backup.json"; then
       printf "%-16s - Was already patched in BSS. Skipping. \n" "${ncn_xname}"
       continue
     fi
@@ -142,7 +142,7 @@ function update-bss() {
     sed -E 's/crashkernel=[0-9]+[a-zA-Z]? //g' "${CURRENT_LOG_DIR}/${ncn_xname}.bss.backup.json" > "${CURRENT_LOG_DIR}/${ncn_xname}.bss.scrubbed.json"
 
     # Apply the new settings.
-    jq '.params+=" crashkernel=360M,high crashkernel=72M,low"' "${CURRENT_LOG_DIR}/${ncn_xname}.bss.scrubbed.json" > "${CURRENT_LOG_DIR}/${ncn_xname}.bss.patched.json"
+    jq '.params+=" crashkernel=512M,high crashkernel=72M,low"' "${CURRENT_LOG_DIR}/${ncn_xname}.bss.scrubbed.json" > "${CURRENT_LOG_DIR}/${ncn_xname}.bss.patched.json"
     echo 'Done'
     printf "%-16s - Committing %s/%s.bss.patched.json ... " "${ncn_xname}" "${CURRENT_LOG_DIR}" "${ncn_xname}"
 
