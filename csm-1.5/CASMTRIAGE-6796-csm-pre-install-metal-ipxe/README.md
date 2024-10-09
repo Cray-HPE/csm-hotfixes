@@ -9,6 +9,8 @@ This hotfix will:
 
 After running this hotfix continue installation as usual.
 
+***IMPORTANT*** This hotfix does NOT fix a running system, its specifically targeted towards a fresh install. At the time of writing, there was no need for fixing a running system.
+
 ## JIRA(s)
 
 This hotfix covers the following JIRA(s):
@@ -16,6 +18,11 @@ This hotfix covers the following JIRA(s):
 > ***NOTE*** If/when additional RPMs are added, their corresponding JIRAs should be included here.
 
 * [CASMTRIAGE-6796](https://jira-pro.it.hpe.com:8443/browse/CASMTRIAGE-6796)
+* [CASMTRIAGE-7232](https://jira-pro.it.hpe.com:8443/browse/CASMTRIAGE-7232)
+
+  > **NOTE** This only overlaps CASMTRIAGE-7232 during a fresh install.  
+  > 
+  
 
 ## Usage
 
