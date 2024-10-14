@@ -3,9 +3,9 @@ artifactory.algol60.net/csm-docker/stable:
   tls-verify: true
   images:
     cray-boa:
-    - 1.4.4
+    - 1.4.5
     cray-bos:
-    - 2.10.24
+    - 2.10.27
     cray-cfs:
     - 1.18.6
     cray-power-control:
