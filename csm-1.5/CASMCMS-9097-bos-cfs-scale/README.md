@@ -28,6 +28,8 @@ If applying this hotfix on CSM 1.5.2, it contains the following fixes and enhanc
         requests too large for other services to handle
       - The default value for this option should be sufficient to avoid this problem
     - CASMCMS-9039: Fix applystage action
+    - CASMCMS-9164: Fix runtime error in base operator bad path
+    - CASMCMS-9143: When validating boot sets, check all boot sets for severe errors before returning only warnings
 - CLI
   - Add support for new BOS v2 options described above
 - Tests
@@ -45,6 +47,8 @@ If applying this hotfix on CSM 1.5.1, it contains all of the fixes and enhanceme
   - v2
     - CASMCMS-8997: Improve logging
     - CASMCMS-8998: Optimize operator performance by bypassing unnecessary logic
+    - CASMCMS-9164: Fix runtime error in base operator bad path
+    - CASMCMS-9143: When validating boot sets, check all boot sets for severe errors before returning only warnings
 - CFS
   - CASMCMS-8978: Fix bugs causing failures for some component patch requests
 - PCS
@@ -70,6 +74,8 @@ If applying this hotfix on CSM 1.5.0, it contains all of the fixes and enhanceme
     - CASMCMS-8941: Break up large CFS component queries to avoid failures
     - CASMCMS-8916: BOS v2 components patch/put: Fix bug, validate inputs
     - CASMCMS-8905: Removed unintended ability to update v2 session fields other than status and components
+    - CASMCMS-9164: Fix runtime error in base operator bad path
+    - CASMCMS-9143: When validating boot sets, check all boot sets for severe errors before returning only warnings
   - v1
     - CASMCMS-8274: Gracefully handle CAPMC locked node error
 - CFS
@@ -141,8 +147,8 @@ These steps are not required, but until they are done, the updated RPMs will not
     updated BOS reporter RPM when it runs.
 
     For more information, see
-    - [Create an Image Management Customization CFS Session](https://github.com/Cray-HPE/docs-csm/blob/release/1.4/operations/configuration_management/Create_an_Image_Customization_CFS_Session.md]
-    - [Create UAN Boot Images](https://github.com/Cray-HPE/docs-csm/blob/release/1.4/operations/image_management/Create_UAN_Boot_Images.md)
+    - [Create an Image Management Customization CFS Session](https://github.com/Cray-HPE/docs-csm/blob/release/1.5/operations/configuration_management/Create_an_Image_Customization_CFS_Session.md]
+    - [Create UAN Boot Images](https://github.com/Cray-HPE/docs-csm/blob/release/1.5/operations/image_management/Create_UAN_Boot_Images.md)
 
 ## Rollback
 
