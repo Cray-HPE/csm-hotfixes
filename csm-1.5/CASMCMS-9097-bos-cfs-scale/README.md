@@ -17,6 +17,11 @@ If applying this hotfix on CSM 1.5.2, it contains the following fixes and enhanc
 
 - BOS
   - v2
+    - CASMCMS-9162: Add cfs_read_timeout option
+      - This option is at 10 seconds by default. This is the same value that was used before this became an option that could be set.
+      - This value should be raised higher when BOS requests to CFS are timing out.
+    - CASMCMS-9165: Fix per-bootset CFS option
+      - Without this fix, a CFS configuration set at the boot set level is ignored.
     - CASMCMS-9067: Add session_limit_required option
       - This option is disabled by default. If enabled, BOS v2 sessions cannot be created without specifying a limit
       - This can be used to avoid accidentally creating sessions with no limits specified, if desired

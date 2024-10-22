@@ -23,7 +23,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
-: "${RELEASE:="${RELEASE_NAME:="csm-1.5-bos-cfs-scale"}-${RELEASE_VERSION:="2"}"}"
+: "${RELEASE:="${RELEASE_NAME:="csm-1.5-bos-cfs-scale"}-${RELEASE_VERSION:="3"}"}"
 
 # return if sourced
 return 0 2>/dev/null
