@@ -5,9 +5,9 @@ artifactory.algol60.net/csm-docker/stable:
     cfs-hwsync-agent:
     - 1.9.3
     cray-boa:
-    - 1.3.7
+    - 1.3.8
     cray-bos:
-    - 2.0.44
+    - 2.0.47
     cray-cfs:
     - 1.12.9
     docker.io/library/redis:
