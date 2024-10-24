@@ -140,7 +140,7 @@ spec:
     version: 1.18.6
     namespace: services
   - name: cray-bos
-    version: 2.10.24
+    version: 2.10.28
     namespace: services
     timeout: 10m
 EOF
