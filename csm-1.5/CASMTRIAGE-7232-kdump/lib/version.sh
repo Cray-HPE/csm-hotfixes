@@ -22,21 +22,21 @@
 #  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #  OTHER DEALINGS IN THE SOFTWARE.
 #
-: "${RELEASE:="${RELEASE_NAME:="CASMTRIAGE-6796-csm-pre-install-metal-ipxe"}-${RELEASE_VERSION:="2"}"}"
+: "${RELEASE:="${RELEASE_NAME:="CASMTRIAGE-7232-kdump"}-${RELEASE_VERSION:="1"}"}"
 
 # return if sourced
-return 0 2>/dev/null
+return 0 2> /dev/null
 
 # otherwise print release information
 if [[ $# -eq 0 ]]; then
-    echo "$RELEASE"
+  echo "$RELEASE"
 else
-    case "$1" in
-    -n|--name) echo "$RELEASE_NAME" ;;
-    -v|--version) echo "$RELEASE_VERSION" ;;
+  case "$1" in
+    -n | --name) echo "$RELEASE_NAME" ;;
+    -v | --version) echo "$RELEASE_VERSION" ;;
     *)
-        echo >&2 "error: unsupported argumented: $1"
-        echo >&2 "usage: ${0##*/} [--name|--version]"
-        ;;
-    esac
+      echo >&2 "error: unsupported argumented: $1"
+      echo >&2 "usage: ${0##*/} [--name|--version]"
+      ;;
+  esac
 fi
