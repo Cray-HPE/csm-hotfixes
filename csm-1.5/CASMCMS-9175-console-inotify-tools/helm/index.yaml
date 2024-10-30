@@ -1,0 +1,7 @@
+---
+https://artifactory.algol60.net/artifactory/csm-helm-charts/stable:
+  charts:
+    cray-console-operator:
+    - 1.8.2
+    cray-console-node:
+    - 2.3.2
