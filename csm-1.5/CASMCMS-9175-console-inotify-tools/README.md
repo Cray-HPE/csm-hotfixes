@@ -71,7 +71,7 @@ In the above example, the current PVC size is 150Gi.
 
 Modify the manifest contained in the file `install-hotfix.sh` to include a helm chart value override to that value:
 
-```text
+```yaml
   - name: cray-console-operator
     source: nexus
     version: 1.8.2
