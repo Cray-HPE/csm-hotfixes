@@ -35,6 +35,10 @@ If applying this hotfix on CSM 1.5.2, it contains the following fixes and enhanc
     - CASMCMS-9039: Fix applystage action
     - CASMCMS-9164: Fix runtime error in base operator bad path
     - CASMCMS-9143: When validating boot sets, check all boot sets for severe errors before returning only warnings
+- CFS
+  - CASMCMS-9196: Prevent failure when creating source without specifying authentication method
+  - CASMCMS-9197: Significantly improve speed of some queries on large scale systems
+  - CASMCMS-9198: Prevent invalid option values causing CFS to enter CrashLoopBackOff
 - CLI
   - Add support for new BOS v2 options described above
 - Tests
