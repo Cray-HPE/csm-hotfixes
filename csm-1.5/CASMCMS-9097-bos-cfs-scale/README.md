@@ -39,6 +39,8 @@ If applying this hotfix on CSM 1.5.2, it contains the following fixes and enhanc
   - CASMCMS-9196: Prevent failure when creating source without specifying authentication method
   - CASMCMS-9197: Significantly improve speed of some queries on large scale systems
   - CASMCMS-9198: Prevent invalid option values causing CFS to enter CrashLoopBackOff
+  - CASMCMS-9200: Fix bug causing excessive redundant database and network activity
+  - CASMCMS-9202: Add API action to enable restore of CFS v3 sources from backup
 - CLI
   - Add support for new BOS v2 options described above
 - Tests

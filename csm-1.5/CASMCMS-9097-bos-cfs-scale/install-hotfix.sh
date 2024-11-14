@@ -137,7 +137,7 @@ spec:
     namespace: services
     timeout: 20m
   - name: cray-cfs-api
-    version: 1.18.9
+    version: 1.18.10
     namespace: services
   - name: cray-bos
     version: 2.10.28
