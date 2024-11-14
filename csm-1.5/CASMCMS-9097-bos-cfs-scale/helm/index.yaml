@@ -4,6 +4,6 @@ https://artifactory.algol60.net/artifactory/csm-helm-charts/stable:
     cray-bos:
     - 2.10.28
     cray-cfs-api:
-    - 1.18.10
+    - 1.18.11
     cray-power-control:
     - 2.0.9
