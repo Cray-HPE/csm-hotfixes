@@ -42,6 +42,8 @@ If applying this hotfix on CSM 1.5.2, it contains the following fixes and enhanc
   - CASMCMS-9200: Fix bug causing excessive redundant database and network activity
   - CASMCMS-9202: Add API action to enable restore of CFS v3 sources from backup
   - CASMCMS-9206: Fix bug preventing creation of v3 configurations if `additional_inventory` contains `source` field.
+  - CASMCMS-9210: Correctly check additional_inventory layers when determining if a source is in use
+  - CASMCMS-9211: Improve performance of configuration delete operation
 - CLI
   - Add support for new BOS v2 options described above
 - Tests
