@@ -35,6 +35,15 @@ If applying this hotfix on CSM 1.5.2, it contains the following fixes and enhanc
     - CASMCMS-9039: Fix applystage action
     - CASMCMS-9164: Fix runtime error in base operator bad path
     - CASMCMS-9143: When validating boot sets, check all boot sets for severe errors before returning only warnings
+- CFS
+  - CASMCMS-9196: Prevent failure when creating source without specifying authentication method
+  - CASMCMS-9197: Significantly improve speed of some queries on large scale systems
+  - CASMCMS-9198: Prevent invalid option values causing CFS to enter CrashLoopBackOff
+  - CASMCMS-9200: Fix bug causing excessive redundant database and network activity
+  - CASMCMS-9202: Add API action to enable restore of CFS v3 sources from backup
+  - CASMCMS-9206: Fix bug preventing creation of v3 configurations if `additional_inventory` contains `source` field.
+  - CASMCMS-9210: Correctly check additional_inventory layers when determining if a source is in use
+  - CASMCMS-9211: Improve performance of configuration delete operation
 - CLI
   - Add support for new BOS v2 options described above
 - Tests
