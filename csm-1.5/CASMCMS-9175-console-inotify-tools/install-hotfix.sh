@@ -62,7 +62,9 @@ kubectl -n loftsman get secret site-init -o jsonpath='{.data.customizations\.yam
 # manifestgen
 manifestgen -c "${workdir}/customizations.yaml" -i "${workdir}/manifest.yaml" -o "${workdir}/deploy-hotfix.yaml"
 
-# Load artifacts into nexus
+# Load artifacts into nexus - k8s services only
+export patch_services=Y
+export patch_rpms=N
 ${ROOTDIR}/lib/setup-nexus.sh
 
 # Deploy chart
