@@ -23,7 +23,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
-: "${RELEASE:="${RELEASE_NAME:="csm-1.5-casmcms-9175"}-${RELEASE_VERSION:="1"}"}"
+: "${RELEASE:="${RELEASE_NAME:="csm-1.5-casmcms-9175"}-${RELEASE_VERSION:="2"}"}"
 
 # return if sourced
 return 0 2>/dev/null
