@@ -9,9 +9,9 @@ artifactory.algol60.net/csm-docker/stable:
     cray-cfs:
     - 1.18.15
     cray-power-control:
-    - 2.4.0
+    - 2.6.0
     cray-power-control-hmth-test:
-    - 2.4.0
+    - 2.6.0
     docker.io/library/redis:
     - 5.0-alpine
     - 5.0-alpine3.12
