@@ -44,6 +44,8 @@ If applying this hotfix on CSM 1.5.2, it contains the following fixes and enhanc
   - CASMCMS-9206: Fix bug preventing creation of v3 configurations if `additional_inventory` contains `source` field.
   - CASMCMS-9210: Correctly check additional_inventory layers when determining if a source is in use
   - CASMCMS-9211: Improve performance of configuration delete operation
+- PCS
+  - CASMHMS-6299: Fix resource leaks and scaling issues
 - CLI
   - Add support for new BOS v2 options described above
 - Tests

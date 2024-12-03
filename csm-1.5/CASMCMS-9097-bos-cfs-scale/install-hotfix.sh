@@ -133,7 +133,7 @@ metadata:
 spec:
   charts:
   - name: cray-power-control
-    version: 2.0.9
+    version: 2.0.11
     namespace: services
     timeout: 20m
   - name: cray-cfs-api
