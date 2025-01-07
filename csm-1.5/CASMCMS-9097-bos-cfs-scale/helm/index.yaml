@@ -2,7 +2,7 @@
 https://artifactory.algol60.net/artifactory/csm-helm-charts/stable:
   charts:
     cray-bos:
-    - 2.10.28
+    - 2.10.31
     cray-cfs-api:
     - 1.18.15
     cray-power-control:

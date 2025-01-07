@@ -2,7 +2,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2024 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2024-2025 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -140,7 +140,7 @@ spec:
     version: 1.18.15
     namespace: services
   - name: cray-bos
-    version: 2.10.28
+    version: 2.10.31
     namespace: services
     timeout: 10m
 EOF

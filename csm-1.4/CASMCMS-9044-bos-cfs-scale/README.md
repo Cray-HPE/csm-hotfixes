@@ -18,9 +18,10 @@ If applying this hotfix on CSM 1.4.3 or 1.4.4, it contains the following fixes a
       - Prevents a race condition that can cause some BOS operations to fail soon after full system bringup
     - CASMTRIAGE-6993: Improve BOS server resiliency and prevent OOM kill issues
   - v2
-    - CASMCMS-9162: Add cfs_read_timeout option
-      - This option is at 10 seconds by default. This is the same value that was used before this became an option that could be set.
-      - This value should be raised higher when BOS requests to CFS are timing out.
+    - CASMCMS-9225: Improve performance of large GET components requests
+    - CASMCMS-9162/CASMCMS-9242: Add BOS options: bss_read_timeout, capmc_read_timeout, cfs_read_timeout, hsm_read_timeout
+      - These options are each at 10 seconds by default. This is the same value that was used before this became an option that could be set.
+      - This value should be raised higher when BOS requests to the particular service are timing out.
     - CASMCMS-9165: Fix per-bootset CFS option
       - Without this fix, a CFS configuration set at the boot set level is ignored.
     - CASMCMS-9143: Fix bug in validate session template endpoint that caused severe errors to be overlooked in some cases.
