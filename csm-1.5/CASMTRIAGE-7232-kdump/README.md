@@ -1,8 +1,8 @@
 # CSM 1.5 Kdump
 
 This hotfix should be ran in one of three places depending on the state of the machine:
-- During a fresh install, before booting NCNs. 
-- On a running, installed system before an upgrade. 
+- During a fresh install, before booting NCNs.
+- On a running, installed system before an upgrade.
 - On a running, installed system with a rolling reboot of the NCNs
 
 After running this hotfix continue installation as usual.

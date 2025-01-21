@@ -2,7 +2,7 @@
 #
 #  MIT License
 #
-#  (C) Copyright 2024 Hewlett Packard Enterprise Development LP
+#  (C) Copyright 2024-2025 Hewlett Packard Enterprise Development LP
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a
 #  copy of this software and associated documentation files (the "Software"),
@@ -86,6 +86,7 @@ fi
 
 createrepo "$repository"
 
+echo 'Cleaning up metal-ipxe scripts ... '
 boot_script="$(rpm -q --filesbypkg metal-ipxe | awk '/script\.ipxe/{print $NF}')"
 if [ -z "$boot_script" ]; then
   # No boot script to remove, metal-ipxe is not installed.
@@ -93,6 +94,17 @@ if [ -z "$boot_script" ]; then
 elif [ -f "$boot_script" ]; then
   rm -f "$boot_script"
 fi
+
+echo 'Uninstalling metal-ipxe ... '
+if ! rpm -e metal-ipxe ; then
+  echo 'metal-ipxe was already uninstalled.'
+else
+  echo 'Uninstalled metal-ipxe.'
+fi
+
+echo 'Installing hotfixed metal-ipxe ... '
+zypper --plus-repo "${CSM_PATH}/rpm/cray/csm/noos" --no-gpg-checks install -y metal-ipxe
+echo 'Done.'
 
 clean-install-deps
 
