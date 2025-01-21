@@ -8,6 +8,8 @@ of the CSM tarball on the PIT. Specifically, after step 3 of section 2 in the [p
 This hotfix will:
 * Copy a new `metal-ipxe` package into an extracted CSM tarball.
 * Recreate/update the repodata in the extracted tarball.
+* Uninstall and purge the old `metal-ipxe` RPM.
+* Install the new, fixed `metal-ipxe` package.
 
 After running this hotfix continue installation as usual.
 
