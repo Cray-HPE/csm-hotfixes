@@ -1,0 +1,4 @@
+https://artifactory.algol60.net/artifactory/csm-rpms/hpe/stable/sle-15sp4:
+  rpms:
+    - cfs-debugger-1.9.3-1.aarch64
+    - cfs-debugger-1.9.3-1.x86_64
