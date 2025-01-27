@@ -2,7 +2,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2024 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2024-2025 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -107,7 +107,7 @@ function update-disk-bootloaders {
       echo "BOOTRAID already mounted"
     fi
     BOOTRAID="$(lsblk -o MOUNTPOINT -nr /dev/disk/by-label/BOOTRAID)"
-    if [ ! -d "$BOOTRAID/boot/grub2/grub.cfg ]; then
+    if [ ! -f "$BOOTRAID/boot/grub2/grub.cfg" ]; then
       echo >&2 "Missing grub.cfg! $BOOTRAID/boot/grub2/grub.cfg was not found."
       exit 1
     fi
