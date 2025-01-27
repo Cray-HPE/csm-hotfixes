@@ -124,7 +124,7 @@ function update-disk-bootloaders {
       sed -i -E '\''s/(crashkernel=)[0-9]+[a-zA-Z]/\1512M,high \172M,low/'\'' "$BOOTRAID/boot/grub2/grub.cfg"
       echo "Done"
     fi
-  ' 2>/dev/null | dshbak -c ; then
+  ' | dshbak -c ; then
       echo >&2 "Failed to update the crashkernel bootparemeter on one or more nodes' disk bootloaders."
       return 1
   fi
