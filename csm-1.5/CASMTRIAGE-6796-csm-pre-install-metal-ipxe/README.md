@@ -2,7 +2,7 @@
 
 > **NOTE** This hotfix is superseded by CASMTRIAGE-7232's hotfix.
   
-This hotfix is exclusive to the 1.5.0 fresh install. It is imperative to run this hotfix immediately following the extraction
+This hotfix is exclusive to the fresh install of 1.5.0, 1.5.1, 1.5.2, and 1.5.3. It is imperative to run this hotfix immediately following the extraction
 of the CSM tarball on the PIT. Specifically, after step 3 of section 2 in the [pre-installation](https://github.com/Cray-HPE/docs-csm/blob/release/1.5/install/pre-installation.md#2-download-and-extract-the-csm-tarball).
 
 This hotfix will:
@@ -25,7 +25,7 @@ This hotfix covers the following JIRA(s):
 
 ## Usage
 
-1. Set `CSM_PATH`, this needs to be the root of the extracted 1.5.0 tarball.
+1. Set `CSM_PATH`, this needs to be the root of the extracted 1.5 tarball.
 
    > Example: `/var/www/ephemeral/csm-1.5.0`
 

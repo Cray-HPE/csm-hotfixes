@@ -86,25 +86,17 @@ fi
 
 createrepo "$repository"
 
-echo 'Cleaning up metal-ipxe scripts ... '
-boot_script="$(rpm -q --filesbypkg metal-ipxe | awk '/script\.ipxe/{print $NF}')"
-if [ -z "$boot_script" ]; then
-  # No boot script to remove, metal-ipxe is not installed.
-  :
-elif [ -f "$boot_script" ]; then
-  rm -f "$boot_script"
-fi
-
-echo 'Uninstalling metal-ipxe ... '
-if ! rpm -e metal-ipxe ; then
-  echo 'metal-ipxe was already uninstalled.'
-else
-  echo 'Uninstalled metal-ipxe.'
-fi
-
 echo 'Installing hotfixed metal-ipxe ... '
-zypper --plus-repo "${CSM_PATH}/rpm/cray/csm/noos" --no-gpg-checks install -y metal-ipxe
+zypper --plus-repo "${CSM_PATH}/rpm/cray/csm/noos" --no-gpg-checks update -y metal-ipxe
 echo 'Done.'
+
+boot_script="$(rpm -q --filesbypkg metal-ipxe | awk '/script\.ipxe/{print $NF}')"
+if [ -f "${boot_script}.rpmsave" ]; then
+  echo "Found ${boot_script}.rpmsave, renaming "
+  mv "${boot_script}.rpmsave" "${boot_script}"
+else
+  :
+fi
 
 clean-install-deps
 
