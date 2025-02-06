@@ -1,8 +1,8 @@
 # CSM 1.5 Kdump
 
 This hotfix should be ran in one of three places depending on the state of the machine:
-- During a fresh install, before booting NCNs. 
-- On a running, installed system before an upgrade. 
+- During a fresh install, before booting NCNs.
+- On a running, installed system before an upgrade.
 - On a running, installed system with a rolling reboot of the NCNs
 
 After running this hotfix continue installation as usual.
@@ -11,10 +11,11 @@ After running this hotfix continue installation as usual.
 
 This hotfix covers the following JIRA(s):
 
-* [CASMTRIAGE-7232](https://jira-pro.it.hpe.com:8443/browse/CASMTRIAGE-7232)
 * [CASMTRIAGE-6796](https://jira-pro.it.hpe.com:8443/browse/CASMTRIAGE-6796)
+* [CASMTRIAGE-7232](https://jira-pro.it.hpe.com:8443/browse/CASMTRIAGE-7232)
+* [CASMTRIAGE-6796](https://jira-pro.it.hpe.com:8443/browse/CASMTRIAGE-7709)
 
-  > **NOTE** CASMTRIAGE-6796 is specific to the fresh install path. If this hotfix is applied to a running system, CASMTRIAGE-6796 is disregarded.
+  > **NOTE** Both CASMTRIAGE-6796 and CASMTRIAGE-7709 is specific to the fresh install path. If this hotfix is applied to a running system, both CASMTRIAGE-6796 and CASMTRIAGE-7709 can be disregarded.
 
 ## Usage
 
