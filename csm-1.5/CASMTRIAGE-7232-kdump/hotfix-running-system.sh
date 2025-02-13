@@ -2,7 +2,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2024 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2024-2025 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -107,7 +107,7 @@ function update-disk-bootloaders {
       echo "BOOTRAID already mounted"
     fi
     BOOTRAID="$(lsblk -o MOUNTPOINT -nr /dev/disk/by-label/BOOTRAID)"
-    if [ ! -d "$BOOTRAID/boot/grub2/grub.cfg ]; then
+    if [ ! -f "$BOOTRAID/boot/grub2/grub.cfg" ]; then
       echo >&2 "Missing grub.cfg! $BOOTRAID/boot/grub2/grub.cfg was not found."
       exit 1
     fi
@@ -119,12 +119,12 @@ function update-disk-bootloaders {
       echo "Done"
       printf "Patching disk bootloader ... "
 
-      sed -i -E "s/crashkernel=[0-9]+[a-zA-Z]?//g" "$BOOTRAID/boot/grub2/grub.cfg"
+      sed -i -E "s/\s?crashkernel=[0-9]+[a-zA-Z]?//g" "$BOOTRAID/boot/grub2/grub.cfg"
 
-      sed -i -E '\''s/(crashkernel=)[0-9]+[a-zA-Z]/\1512M,high \172M,low/'\'' "$BOOTRAID/boot/grub2/grub.cfg"
+      sed -i -E "/\s+linux(efi)?/ s/\s*$/ crashkernel=512M,high crashkernel=72M,low/" "$BOOTRAID/boot/grub2/grub.cfg"
       echo "Done"
     fi
-  ' 2>/dev/null | dshbak -c ; then
+  ' | dshbak -c ; then
       echo >&2 "Failed to update the crashkernel bootparemeter on one or more nodes' disk bootloaders."
       return 1
   fi
