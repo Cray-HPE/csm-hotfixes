@@ -119,7 +119,7 @@ function update-disk-bootloaders {
       echo "Done"
       printf "Patching disk bootloader ... "
 
-      sed -i -E "s/crashkernel=[0-9]+[a-zA-Z]?//g" "$BOOTRAID/boot/grub2/grub.cfg"
+      sed -i -E "s/\s?crashkernel=[0-9]+[a-zA-Z]?//g" "$BOOTRAID/boot/grub2/grub.cfg"
 
       sed -i -E '\''s/(crashkernel=)[0-9]+[a-zA-Z]/\1512M,high \172M,low/'\'' "$BOOTRAID/boot/grub2/grub.cfg"
       echo "Done"
