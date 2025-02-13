@@ -121,7 +121,7 @@ function update-disk-bootloaders {
 
       sed -i -E "s/\s?crashkernel=[0-9]+[a-zA-Z]?//g" "$BOOTRAID/boot/grub2/grub.cfg"
 
-      sed -i -E '\''s/(crashkernel=)[0-9]+[a-zA-Z]/\1512M,high \172M,low/'\'' "$BOOTRAID/boot/grub2/grub.cfg"
+      sed -i -E "/\s+linux(efi)?/ s/\s*$/ crashkernel=512M,high crashkernel=72M,low/" "$BOOTRAID/boot/grub2/grub.cfg"
       echo "Done"
     fi
   ' | dshbak -c ; then
