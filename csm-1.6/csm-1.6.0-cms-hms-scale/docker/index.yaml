@@ -1,0 +1,20 @@
+---
+artifactory.algol60.net/csm-docker/stable:
+  tls-verify: true
+  images:
+    cray-bos:
+    - 2.30.7
+    cray-firmware-action:
+    - 1.35.0
+    cray-firmware-action-hmth-test:
+    - 1.35.0
+    cray-power-control:
+    - 2.6.0
+    cray-power-control-hmth-test:
+    - 2.6.0
+    cray-smd:
+    - 2.30.0
+    cray-smd-hmth-test:
+    - 2.30.0
+    hms-hmcollector:
+    - 2.34.0
