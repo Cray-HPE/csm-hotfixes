@@ -1,0 +1,13 @@
+---
+https://artifactory.algol60.net/artifactory/csm-helm-charts/stable:
+  charts:
+    cray-bos:
+    - 2.30.7
+    cray-hms-firmware-action:
+    - 3.1.10
+    cray-hms-hmcollector:
+    - 2.16.8
+    cray-hms-smd:
+    - 7.1.19
+    cray-power-control:
+    - 2.1.10
