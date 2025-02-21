@@ -8,6 +8,8 @@
 
 - BOS
   - CASMCMS-9225: Improve performance of large GET components requests
+  - CASMCMS-9242: Add BOS options: bss_read_timeout, ims_read_timeout, hsm_read_timeout, pcs_read_timeout
+  - CASMCMS-9177: Have BOS migration job wait for databases to be ready before proceeding
 - FAS
   - CASMHMS-6310: Fix FAS resource leaks
 - `hmcollector`

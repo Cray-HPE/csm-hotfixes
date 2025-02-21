@@ -75,7 +75,7 @@ spec:
     namespace: services
     timeout: 10m
   - name: cray-bos
-    version: 2.30.7
+    version: 2.30.8
     namespace: services
     timeout: 10m
 EOF
