@@ -1,0 +1,8 @@
+---
+artifactory.algol60.net/csm-docker/stable:
+  tls-verify: true
+  images:
+    csm-config:
+    - 1.28.5
+    cray-product-catalog-update:
+    - 2.6.0
