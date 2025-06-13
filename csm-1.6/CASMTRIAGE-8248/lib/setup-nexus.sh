@@ -30,7 +30,7 @@ source "${ROOTDIR}/lib/install.sh"
 load-install-deps
 
 # Upload assets to existing repositories
-skopeo-sync --all "${ROOTDIR}/docker"
+skopeo-sync  "${ROOTDIR}/docker"
 
 clean-install-deps
 
