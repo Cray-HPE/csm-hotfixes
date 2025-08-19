@@ -25,4 +25,4 @@ artifactory.algol60.net/csm-docker/stable:
   tls-verify: true
   images:
     cray-nexus-setup:
-    - 0.12.1
+    - 0.10.2
