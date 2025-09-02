@@ -57,7 +57,7 @@ kubectl -n loftsman get secret site-init -o jsonpath='{.data.customizations\.yam
 
 # Extract and update cray-precache-images
 kubectl -n loftsman get cm loftsman-platform -o jsonpath='{.data.manifest\.yaml}' | yq r - 'spec.charts(name==cray-precache-images)' > "${workdir}/precache.yaml"
-yq w -i "${workdir}/precache.yaml" 'values.cacheImages[+]' "artifactory.algol60.net/csm-docker/stable/cray-dns-unbound:0.8.5
+yq w -i "${workdir}/precache.yaml" 'values.cacheImages[+]' "artifactory.algol60.net/csm-docker/stable/cray-dns-unbound:0.8.5"
 yq w -i "${workdir}/precache.yaml" 'source' "nexus"
 yq w -i "${workdir}/manifest.yaml" 'spec.charts[+]' -f "${workdir}/precache.yaml"
 

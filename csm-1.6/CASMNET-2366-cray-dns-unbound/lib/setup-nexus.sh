@@ -31,6 +31,7 @@ load-install-deps
 
 # Upload assets to existing repositories
 skopeo-sync "${ROOTDIR}/docker"
+nexus-upload helm "${ROOTDIR}/helm" "${CHARTS_REPO:-"charts"}"
 
 clean-install-deps
 
