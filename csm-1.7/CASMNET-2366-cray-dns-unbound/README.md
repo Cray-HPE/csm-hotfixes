@@ -7,7 +7,8 @@ The hotfix ensures that the active configuration remains unchanged if the Kea AP
 
 ## Prerequisites
 
-- CSM versions 1.6.0 to 1.6.2
+- CSM version 1.7.0
+  - Fixed in CSM 1.7.1
 
 ## Installation
 
