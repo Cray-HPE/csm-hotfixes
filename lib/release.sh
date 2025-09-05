@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-# Copyright 2020-2022 Hewlett Packard Enterprise Development LP
+# Copyright 2020-2025 Hewlett Packard Enterprise Development LP
 
 : "${PACKAGING_TOOLS_IMAGE:=arti.hpc.amslabs.hpecorp.net/internal-docker-stable-local/packaging-tools:0.13.0}"
 : "${RPM_TOOLS_IMAGE:=arti.hpc.amslabs.hpecorp.net/internal-docker-stable-local/rpm-tools:1.0.0}"
-: "${SKOPEO_IMAGE:=arti.hpc.amslabs.hpecorp.net/quay-remote/skopeo/stable:v1.13.2}"
+: "${SKOPEO_IMAGE:=arti.hpc.amslabs.hpecorp.net/dst-docker-master-local/dst-skopeo/stable:v1.13.2}"
 : "${CRAY_NEXUS_SETUP_IMAGE:=arti.hpc.amslabs.hpecorp.net/csm-docker-remote/stable/cray-nexus-setup:0.7.1}"
 : "${ARTIFACTORY_HELPER_IMAGE:=arti.hpc.amslabs.hpecorp.net/dst-docker-master-local/arti-helper:latest}"
 : "${CFS_CONFIG_UTIL_IMAGE:=arti.hpc.amslabs.hpecorp.net/csm-docker-remote/stable/cfs-config-util:3.3.1}"
@@ -15,14 +15,29 @@
 : "${CRAY_NLS_IMAGE:=arti.hpc.amslabs.hpecorp.net/csm-docker-remote/stable/cray-nls:0.10.0}"
 
 
-# Prefer to use docker, but for environments with podman
-if [[ "${USE_PODMAN_NOT_DOCKER:-"no"}" == "yes" ]]; then
-    echo >&2 "warning: using podman, not docker"
+# Auto-detect docker or podman
+CONTAINER_RUNNER="podman"
+if which podman &> /dev/null; then
+    echo >&2 "info: using podman"
     shopt -s expand_aliases
     alias docker=podman
     declare -a podman_run_flags=(--userns keep-id)
+elif which docker &> /dev/null; then
+    docker_path=$(which docker)
+    # Check if docker is actually an alias to podman
+    if [[ $(readlink -f "$docker_path") == *podman* ]]; then
+        echo >&2 "info: docker is an alias to podman, using podman"
+        shopt -s expand_aliases
+        alias docker=podman
+        declare -a podman_run_flags=(--userns keep-id)
+    else
+        echo >&2 "info: using docker"
+        declare -a podman_run_flags=('')
+	CONTAINER_RUNNER="docker"
+    fi
 else
-    declare -a podman_run_flags=('') 
+    echo >&2 "error: neither docker nor podman is installed"
+    exit 1
 fi
 
 function requires() {
@@ -102,7 +117,7 @@ function helm-sync() {
         REPO_CREDS_DOCKER_OPTIONS="-e ${REPOCREDSVARNAME}"
         REPO_CREDS_HELMSYNC_OPTIONS="-c ${REPOCREDSVARNAME}"
     fi
-    
+
     docker run ${REPO_CREDS_DOCKER_OPTIONS} --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
         ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
         -v "$(realpath "$index"):/index.yaml:ro" \
@@ -166,12 +181,12 @@ function rpm-sync-src-latest() {
 function rpm-sync() {
     local index="$1"
     local destdir="$2"
-    local FAIL_ON_SIG_ERROR="" 
+    local FAIL_ON_SIG_ERROR=""
     if [ $# -ge 3 ]; then
         if [ -n "$3" ]; then
             FAIL_ON_SIG_ERROR="-s"
         fi
-    fi 
+    fi
 
     [[ -d "$destdir" ]] || mkdir -p "$destdir"
 
@@ -191,16 +206,19 @@ function rpm-sync() {
         rpm-sync ${REPO_CREDS_RPMSYNC_OPTIONS} -n "${RPM_SYNC_NUM_CONCURRENT_DOWNLOADS:-1}" ${FAIL_ON_SIG_ERROR} -v -d /data /index.yaml
 }
 
-# usage: extract-from-container SOURCE DESTINATION KEY
+# usage: extract-from-container IMAGE_DIR DESTINATION KEY
 #
-# Extracts files or directories with names matching the regular expression KEY from the directory-formatted
-# Docker image SOURCE to the directory DESTINATION.
+# Extracts files or directories whose names match the regular expression KEY from the directory-formatted
+# Docker image IMAGE_DIR to the directory DESTINATION.
+# N.B. This function must use podman rather than docker. Docker does not allow you to mount a non-running
+# container.
 #
 # input:
-#     SOURCE      -- Directory where the Docker image layers reside
+#     IMAGE_DIR   -- Directory where the Docker image resides
 #     DESTINATION -- Directory where the extracted content should be placed; will be created if it does not exist
-#     KEY         -- Key to match against; Key can be a file or a directory; Either the file or entire directory
-#                    is copied to the destination directory; The key can use the wildcards used in regular expressions for grep.
+#     KEY         -- Key to match against; Key can match againts a file name or a directory name.
+#                    Either the file or entire directory's contents is copied to the destination directory.
+#                    The key can use the wildcards used in the 'find' command.
 # Exit codes:
 #     0 - item found and extracted
 #     1 - item not found or extraction failed
@@ -211,45 +229,81 @@ function extract-from-container () {
     echo "SHELLOPTS = ${SHELLOPTS}"
     set +e
     trap - ERR
-    local SRC_DIR=$1
+    local IMAGE_DIR=$1
     local DEST_DIR=$2
     local KEY=$3
+    local TMP_DIR=${PWD}/.release.sh.$$.$RANDOM.$RANDOM.$RANDOM
+    local TMP_FILE="output.tar"
 
+    if [ "$CONTAINER_RUNNER" = docker ]; then
+	echo "extract-from-container requires podman, but this is using docker."
+	exit 1
+    fi
+	
     if [ "$#" -ne 3 ]; then
         echo "Expected parameters: <Source Directory> <Destination Directory> <Key>";
         echo "Received $# parameters: $*"
         exit 1;
     fi
 
-    if [ ! -d "${SRC_DIR}" ]; then
-        echo "ERROR -- Source directory: ${SRC_DIR} is not a directory."
+    if [ ! -d "${IMAGE_DIR}" ]; then
+        echo "ERROR -- Image directory: ${IMAGE_DIR} is not a directory."
         exit 1;
     fi
 
     [[ -d "${DEST_DIR}" ]] || mkdir -p "${DEST_DIR}"
 
-    layers="$(find "${SRC_DIR}" -type f | grep -Ev 'manifest|version')"
-    for i in $layers; do
-        file_matches=$(tar --force-local -tf "${i}" 2> /dev/null | grep -o "${KEY}" | sort -u)
-        if [[ -n "$file_matches" ]]; then
-            local cmd="tar --force-local -xf ${i} -C${DEST_DIR} ${file_matches//$'\n'/ }"
-            echo "$cmd"
-            $cmd
-            echo ""
-            # If key found a directory, move the contents out of the directory.
-            name=$(basename "${file_matches}")
-            if [[ -d "${DEST_DIR}"/"${name}" ]]; then
-                shopt -s dotglob
-                cp -a "${DEST_DIR}"/"${name}"/* "${DEST_DIR}"
-                rm -rf "${DEST_DIR:?}"/"${name}"
-            fi
+    run_cmd mkdir -pv "$TMP_DIR" || return 1
+    
+    # Use skopeo to create a docker-archive file from the image directory.
+    docker run --rm -u "$(id -u):$(id -g)" "${podman_run_flags[@]}" \
+    ${DOCKER_NETWORK:+--network="${DOCKER_NETWORK}"} \
+    --mount type=bind,source="${IMAGE_DIR}",target=/image \
+    --mount type=bind,source="${TMP_DIR}",target=/output \
+    "$SKOPEO_IMAGE" \
+    copy --remove-signatures dir:/image docker-archive:/output/${TMP_FILE}
+
+    # Load the docker-archive into podman's local image store
+    docker load -i ${TMP_DIR}/${TMP_FILE} 2>&1 > docker_load_output
+    IMAGE_ID=$(grep "Loaded image" docker_load_output | sed -En 's/.*sha256:([a-f0-9]{64}).*/\1/p')
+
+    # Create a container
+    CONTAINER_ID=$(docker create ${IMAGE_ID})
+
+    # Mount up the container, so it can be searched.
+    # We are not root, so give podman access to mount the container via podman unshare.
+    # For this reason, the command has to run in a sub-shell.
+    docker unshare bash -c '
+    CONTAINER_ID="$1"
+    KEY="$2"
+    DEST_DIR="$3"
+    MOUNT_PATH=$(docker mount "$CONTAINER_ID")
+
+    find "$MOUNT_PATH" \( -type f -o -type d \) -name "$KEY" > found_files
+    for path in $(cat found_files); do
+        if [ -f "$path" ]; then
+            cp "$path" "$DEST_DIR"
+        elif [ -d "$path" ]; then
+            # To ensure the script continues even if cp fails — especially on
+            # empty directories use || true.
+            cp -r "$path"/* "$DEST_DIR" 2>/dev/null || true
         fi
     done
+    docker unmount "$CONTAINER_ID"
+    ' bash "$CONTAINER_ID" "$KEY" "$DEST_DIR"
+
+    # Clean up
+    # Delete the container
+    docker rm ${CONTAINER_ID}
+    # Remove the image from podman's local store
+    docker rmi -f ${IMAGE_ID}    
+    # Remove the temporary directory including the docker-archive file
+    rm -rf ${TMP_DIR}
+
     if [[ "${SAVED_SHELLOPTS}" =~ "errexit" ]]; then
         set -e
     fi
     echo "SHELLOPTS = ${SHELLOPTS}"
-
 }
 
 
@@ -268,7 +322,7 @@ print('Loading docker image data from %s' % index_yaml)
 with open(index_yaml, 'rt') as f:
     index_data = yaml.safe_load(f)
 
-try:    
+try:
     orig_index_yaml=sys.argv[2]
     completed_image_file=sys.argv[3]
 except IndexError:
@@ -419,7 +473,7 @@ function skopeo-sync() {
              attempt_duration_seconds \
              total_duration_seconds \
              new_synced
-    local tmpdir=/tmp/.release.sh.$$.$RANDOM.$RANDOM.$RANDOM    
+    local tmpdir=/tmp/.release.sh.$$.$RANDOM.$RANDOM.$RANDOM
     local completed_image_file="${tmpdir}/completed_images"
     local pymod_dir="${tmpdir}/pymod"
     local tmp_index="${tmpdir}/index"
@@ -427,7 +481,7 @@ function skopeo-sync() {
     # We don't know if we're being called with set -e or not, so best to play it safe
     run_cmd cp -v "$1" "${orig_index}" || return 1
     run_cmd mkdir -pv "$destdir" "$tmpdir" "${pymod_dir}" || return 1
-    
+
     # Normally I would use let for arithmetic, but if the let expression evaluates to 0,
     # the return code is non-0, which breaks us if we're operating under set -e
     # Therefore, in this function, arithmetic is performed in the following fashion:
@@ -450,7 +504,7 @@ function skopeo-sync() {
     while [ true ]; do
         echo "$(date) skopeo-sync: Beginning attempt #${attempt_number}"
         attempt_start_seconds=${SECONDS}
-        skopeo_args=("--retry-times" "5" "--src" "yaml" "--dest" "dir" "--scoped")
+        skopeo_args=("--retry-times" "5" "--src" "yaml" "--dest" "dir" "--scoped" "--all")
         if [ -n "${ARTIFACTORY_USER:-}" ] && [ -n "${ARTIFACTORY_TOKEN:-}" ]; then
             skopeo_args+=("--src-creds" "${ARTIFACTORY_USER}:${ARTIFACTORY_TOKEN}")
         fi
@@ -510,7 +564,7 @@ function skopeo-sync() {
             # Strip off the leading ${destdir}/ from the paths
             run_cmd sed -i "s#^${destdir}/##" "${completed_image_file}" || return 1
             run_cmd cp -v "$index" "${tmp_index}" || return 1
-            
+
             # DEBUG
             run_cmd cat "$index" || return 1
             run_cmd cat "${orig_index}" || return 1
@@ -545,7 +599,7 @@ function skopeo-sync() {
     if [ -d "${tmpdir}" ]; then
         run_cmd rm -rvf "${tmpdir}" || return 1
     fi
-    
+
     return ${function_rc}
 }
 
@@ -587,32 +641,68 @@ function createrepo() {
         createrepo --verbose /data
 }
 
-# usage: get-skopeo-creds (src-creds|dest-creds) RESOURCE
+# usage: get-skopeo-creds RESOURCE
 #
-# Prints '--src-creds username:password' if auth information is provided
-# through REPOCREDSVARNAME env variable.
+# Prints 'username:password' if auth information is provided
+# through REPOCREDSVARNAME env variable for specific hostname, "" otherwise.
 #
 function get-skopeo-creds() {
-    local opt="$1"
-    local resource="$2"
-
-    if [[ -z "$opt" || -z "$resource" ]]; then
-        echo >&2 "usage: get-skopeo-creds (src-creds|dest-creds) RESOURCE"
+    local resource="$1"
+    if [[ -z "$resource" ]]; then
+        echo >&2 "usage: get-skopeo-creds RESOURCE"
         return 1
     fi
     if [[ "${resource}" != docker://* ]]; then
         return 0
     fi
-    if [[ -z "${REPOCREDSVARNAME}" || -z "${!REPOCREDSVARNAME}" ]]; then
+    if [[ -z "${REPOCREDSVARNAME:-}" || -z "${!REPOCREDSVARNAME}" ]]; then
         return 0
     fi
     resource=$(echo "${resource}" | cut -d/ -f3)
-    echo "${!REPOCREDSVARNAME}" | jq -r "to_entries[] | select(.key | startswith(\"https://${resource}\")) | if . == \"\" then \"\" else (\"--${opt} \" + .value.user + \":\" + .value.password) end"
+    echo "${!REPOCREDSVARNAME}" | jq -r "to_entries[] | select(.key | startswith(\"https://${resource}\")) | if . == \"\" then \"\" else (.value.user + \":\" + .value.password) end"
+}
+
+# usage: skopeo-inspect SOURCE
+#
+# Uses skopeo inspect to resolve image:tag into image@digest
+#
+function skopeo-inspect() {
+    local src="$1"
+
+    if [[ -z "$src" ]]; then
+        echo >&2 "usage: skopeo-inspect SOURCE"
+        return 1
+    fi
+
+    echo >&2 "+ skopeo-inspect ${src}"
+
+    local src_trans
+    local src_path
+    local src_dir=""
+    IFS=: read -r src_trans src_path <<< "${src}"
+    if [ "${src_trans}" != "docker" ] && [ "${src_trans}" != "docker-daemon" ]; then
+        src_dir=$(realpath -m "$(dirname "${src_path}")")
+        src="${src_trans}:/src/$(basename "${src_path}")"
+    fi
+
+    local creds
+    creds=$(get-skopeo-creds "${src}")
+
+    docker run --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
+        ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
+        ${src_dir:+-v "${src_dir}:/src"} \
+        "$SKOPEO_IMAGE" \
+        --command-timeout 600s \
+        inspect \
+        --retry-times 5 \
+        --format "{{.Name}}@{{.Digest}}" \
+        ${creds:+"--creds=${creds}"} \
+        "${src}"
 }
 
 # usage: skopeo-copy SOURCE DESTINATION
 #
-# Uses skopeo copy to copy an image.
+# Uses skopeo copy to copy an image from remote location to archive or directory.
 #
 function skopeo-copy() {
     local src="$1"
@@ -623,12 +713,51 @@ function skopeo-copy() {
         return 1
     fi
 
+    echo >&2 "+ skopeo-copy ${src} ${dest}"
+
+    local dest_trans
+    local dest_path
+    local dest_dir=""
+    IFS=: read -r dest_trans dest_path <<< "${dest}"
+    if [ "${dest_trans}" != "docker" ] && [ "${dest_trans}" != "docker-daemon" ]; then
+        dest_dir=$(realpath -m "$(dirname "${dest_path}")")
+        mkdir -p "${dest_dir}"
+        dest="${dest_trans}:/dest/$(basename "${dest_path}")"
+    fi
+
+    local src_trans
+    local src_path
+    local src_dir=""
+    IFS=: read -r src_trans src_path <<< "${src}"
+    if [ "${src_trans}" != "docker" ] && [ "${src_trans}" != "docker-daemon" ]; then
+        src_dir=$(realpath -m "$(dirname "${src_path}")")
+        src="${src_trans}:/src/$(basename "${src_path}")"
+    fi
+
+    local arch_opts
+    if [ "${dest_trans}" == "docker-archive" ]; then
+        arch_opts="--override-os linux --override-arch amd64 --remove-signatures"
+    else
+        arch_opts="--all"
+    fi
+
+    local src_creds
+    src_creds=$(get-skopeo-creds "${src}")
+
+    local dest_creds
+    dest_creds=$(get-skopeo-creds "${dest}")
+
     docker run --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
         ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
-        -v "$(realpath "$destdir"):/data" \
-        "$SKOPEO_IMAGE" copy \
-        $(get-skopeo-creds "src-creds" "${src}") \
-        $(get-skopeo-creds "dest-creds" "${dest}") \
+        ${src_dir:+-v "${src_dir}:/src"} \
+        ${dest_dir:+-v "${dest_dir}:/dest"} \
+        "$SKOPEO_IMAGE" \
+        --command-timeout 600s \
+        copy \
+        ${arch_opts} \
+        --retry-times 5 \
+        ${src_creds:+"--src-creds=${src_creds}"} \
+        ${dest_creds:+"--dest-creds=${dest_creds}"} \
         "${src}" "${dest}"
 }
 
@@ -655,7 +784,7 @@ function vendor-install-deps() {
         --include-cfs-config-util) include_cfs_config_util="yes" ;;
         --include-rpm-tools) include_rpm_tools="yes" ;;
         --) break ;;
-        --*) echo >&2 "error: unsupported option: $opt"; exit 2 ;; 
+        --*) echo >&2 "error: unsupported option: $opt"; exit 2 ;;
         *)  break ;;
         esac
     done
@@ -666,19 +795,19 @@ function vendor-install-deps() {
     [[ -d "$destdir" ]] || mkdir -p "$destdir"
 
     if [[ "${include_nexus:-"yes"}" == "yes" ]]; then
-        skopeo-copy "docker://${CRAY_NEXUS_SETUP_IMAGE}" "docker-archive:/data/cray-nexus-setup.tar:cray-nexus-setup:${release}"
+        skopeo-copy "docker://${CRAY_NEXUS_SETUP_IMAGE}" "docker-archive:${destdir}/cray-nexus-setup.tar:cray-nexus-setup:${release}"
     fi
 
     if [[ "${include_skopeo:-"yes"}" == "yes" ]]; then
-        skopeo-copy "docker://${SKOPEO_IMAGE}" "docker-archive:/data/skopeo.tar:skopeo:${release}"
+        skopeo-copy "docker://${SKOPEO_IMAGE}" "docker-archive:${destdir}/skopeo.tar:skopeo:${release}"
     fi
 
     if [[ "${include_cfs_config_util:-"no"}" == "yes" ]]; then
-        skopeo-copy "docker://${CFS_CONFIG_UTIL_IMAGE}" "docker-archive:/data/cfs-config-util.tar:cfs-config-util:${release}"
+        skopeo-copy "docker://${CFS_CONFIG_UTIL_IMAGE}" "docker-archive:${destdir}/cfs-config-util.tar:cfs-config-util:${release}"
     fi
 
     if [[ "${include_rpm_tools:-"no"}" == "yes" ]]; then
-        skopeo-copy "docker://${RPM_TOOLS_IMAGE}" "docker-archive:/data/rpm-tools.tar:rpm-tools:${release}"
+        skopeo-copy "docker://${RPM_TOOLS_IMAGE}" "docker-archive:${destdir}/rpm-tools.tar:rpm-tools:${release}"
     fi
 }
 

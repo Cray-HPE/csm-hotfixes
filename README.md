@@ -71,6 +71,7 @@ around `git-subtree` commands for checking out and updating vendored
 dependencies. Installation via Homebrew is simply `brew install git-vendor`.
 Once installed, vendor this library into a product release repository via:
 
+One-time setup if not yet vendored:
 ```bash
 $ git vendor add release git@github.hpe.com:hpe/hpc-shastarelm-release.git master
 + git subtree add --prefix vendor/github.hpe.com/hpe/hpc-shastarelm-release --message 'Add "release" from "git@github.hpe.com:hpe/hpc-shastarelm-release.git@master"
@@ -91,7 +92,28 @@ From github.hpe.com:hpe/hpc-shastarelm-release
  * branch            master     -> FETCH_HEAD
 Added dir 'vendor/github.hpe.com/hpe/hpc-shastarelm-release'
 ```
+If the vendor area has already been setup, this command can be used to periodcially update the vendor area:
+```bash
+$ git vendor update release master
+remote: Enumerating objects: 226, done.
+remote: Counting objects: 100% (11/11), done.
+remote: Compressing objects: 100% (8/8), done.
+remote: Total 226 (delta 3), reused 10 (delta 3), pack-reused 215
+Receiving objects: 100% (226/226), 46.94 KiB | 1.38 MiB/s, done.
+Resolving deltas: 100% (118/118), done.
+From github.hpe.com:hpe/hpc-shastarelm-release
+ * branch            master     -> FETCH_HEAD
+From github.hpe.com:hpe/hpc-shastarelm-release
+ * branch            master     -> FETCH_HEAD
+Merge made by the 'recursive' strategy.
+ vendor/github.hpe.com/hpe/hpc-shastarelm-release/lib/install.sh | 101 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ vendor/github.hpe.com/hpe/hpc-shastarelm-release/lib/release.sh |  46 ++++++++++++++++++++++++++++++++++------------
+ 2 files changed, 135 insertions(+), 12 deletions(-)
 
+$ git push
+  or
+$ git push origin [your-branch-name]
+```
 
 ## Nexus Setup
 
