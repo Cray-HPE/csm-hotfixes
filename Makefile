@@ -17,7 +17,7 @@ list: pre-flight-checks
 			echo "not found"; \
 			echo "$${VERSION_SH}" >> dist/build.txt; \
 		fi; \
-	done < <(find . -maxdepth 4 -mindepth 4 -wholename '*/lib/version.sh' ! -wholename './.*' ! -wholename './vendor/*')
+	done < <(find hotfix/ -maxdepth 3 -mindepth 3 -wholename '*/lib/version.sh')
 
 build: list
 	@if [ -f dist/build.txt ]; then \

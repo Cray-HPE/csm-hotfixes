@@ -4,18 +4,30 @@ This repo contains hotfixes which are individually packaged and made available
 to customers. Changes are built and uploaded for each hotfix, if resulting artifact is not yet available
 at upload location. The resulting artifact URL is evaluated as
 
-    https://storage.googleapis.com/csm-release-public/hotfix/<csm_release_dir>/$(<hotfix_dir>/lib/version.sh).tar.gz
+    https://storage.googleapis.com/csm-release-public/hotfix/<csm-X.Y>/<hotfix_name>.tar.gz
 
-for hotfix located in `<csm_release_dir>/<hotfix_dir>/`.
+where
+
+  * <csm-X.Y> ix evaluated based on release branch name.
+  * `<hotfix_name>` is evaluated as output from `hotfix/<hotfix_dir>/lib/version.sh` script.
+
 
 ## Hotfix Distributions
 
-Run `./release.sh <csm_release_dir>/<hotfix_dir>` to generate a distribution for the specified
+Hotfixes are scoped to CSM releases, based on branch name. For example, hotfixes
+for CSM releases 1.5.X are stored in git branch `release/1.5`, in sub-directories
+of `./hotfix` directory.
+
+Run `make clean build` to generate distributions for all hotfixes, which are
+not yet published to https://storage.googleapis.com/csm-release-public/hotfix (requires
+`gsutil` to be installed and configured to access Google Cloud Storage).
+
+Run `./release.sh hotfix/<hotfix_dir>` to generate a distribution for specific
 hotfix.
 
 ## Hotfix Directory Structure
 
-Each hotfix directory is located under respective CSM release directory: `<csm_release_dir>/<hotfix_dir>/`.
+Each hotfix directory is located under respective CSM release directory: `hotfix/<hotfix_dir>/`.
 Hotfix directory is expected to contain asset indexes and scripts for
 applying the hotfix. The following files are used by `release.sh` to generate
 hotfix distributions:
