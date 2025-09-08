@@ -80,10 +80,11 @@ CSM repository:
   ```
 
 - `shasta-cfg` references [SHASTA-CFG/stable] - Default chart customizations
-  and sealed secrets. Vendor `master` branch:
+  and sealed secrets. Vendor `release/1.X` branch corresponding to
+  branch of `csm-hotfixes` repo, for example `release/1.5`:
 
   ```bash
-  $ git vendor update shasta-cfg master
+  $ git vendor update shasta-cfg release/1.5
   ```
 
 [git vendor]: https://github.com/brettlangdon/git-vendor

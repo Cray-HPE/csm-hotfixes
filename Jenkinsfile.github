@@ -43,7 +43,9 @@ pipeline {
 
     stage('Upload to GCP') {
       when {
-        branch 'master'
+        expression {
+          env.BRANCH_NAME ==~ /release\/.*/
+        }
       }
       steps {
         script {
