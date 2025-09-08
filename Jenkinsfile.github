@@ -48,7 +48,9 @@ pipeline {
       steps {
         script {
           sh '''
+            mkdir -p dist/
             touch dist/slack.txt
+            touch dist/build.txt
             while read VERSION_SH; do
               RELEASE="$("$VERSION_SH")"
               FOLDER="$(basename "$(dirname "${VERSION_SH%/lib/version.sh}")")"
