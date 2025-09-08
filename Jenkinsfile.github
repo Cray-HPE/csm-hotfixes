@@ -33,50 +33,10 @@ pipeline {
       }
     }
 
-    stage('Find hotfixes to build') {
-      steps {
-        sh '''
-          mkdir -p dist
-          rm -f dist/build.txt
-          touch dist/build.txt
-          find . -maxdepth 4 -mindepth 4 -wholename '*/lib/version.sh' ! -wholename './.*' ! -wholename './vendor/*' | while read VERSION_SH; do
-            RELEASE="$("$VERSION_SH")"
-            FOLDER="$(basename "$(dirname "${VERSION_SH%/lib/version.sh}")")"
-            GCS_FILE="${GCS_PREFIX}/${FOLDER}/${RELEASE}.tar.gz"
-            echo "Looking for existing distribution ${GCS_FILE}"
-            if gsutil -q stat "${GCS_FILE}"; then
-              echo "Distribution already found for ${FOLDER}/${RELEASE}. Not rebuilding."
-              echo "https://storage.googleapis.com/csm-release-public/hotfix/${RELEASE}.tar.gz"
-            else
-              echo "Distribution not found for ${FOLDER}/${RELEASE}. Building."
-              echo "${VERSION_SH}" >> dist/build.txt
-            fi
-          done
-
-          if [ -s dist/build.txt ]; then
-            echo "Hotfixes to build:"
-            cat dist/build.txt
-          else
-            echo "Nothing to build."
-          fi
-        '''
-      }
-    }
-
     stage('Build Hotfixes') {
       steps {
        withCredentials([usernamePassword(credentialsId: credentialsId, usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_TOKEN')]) {
-        sh '''
-          if [ -s dist/build.txt ]; then
-            while read VERSION_SH; do
-              HOTFIX="${VERSION_SH%%/lib/version.sh}"
-              echo "Building ${HOTFIX}"
-              ./release.sh "$HOTFIX"
-            done < dist/build.txt
-          else
-            echo "Nothing to build."
-          fi
-        '''
+         sh 'make clean build'
        }
       }
     }
@@ -124,7 +84,7 @@ pipeline {
 
   post {
     always {
-      archiveArtifacts artifacts: 'dist/**/*', fingerprint: true
+      archiveArtifacts artifacts: 'dist/**/*', allowEmptyArchive: true
     }
   }
 }
