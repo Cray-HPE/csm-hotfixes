@@ -46,19 +46,19 @@ pipeline {
     }
 
     stage('Upload to GCP') {
-      when {
-        expression {
-          env.BRANCH_NAME ==~ /release\/.*/
-        }
-      }
+      // when {
+      //   expression {
+      //     env.BRANCH_NAME ==~ /release\/.*/
+      //   }
+      // }
       steps {
         script {
           sh 'make upload'
           def msgs = readFile("dist/slack.txt").split("\n")
           for(String msg in msgs) {
-            if(params.SLACK_CHANNEL != "" && msg != "") {
-              slackSend(channel: params.SLACK_CHANNEL, color: "good", message: msg)
-            }
+            // if(params.SLACK_CHANNEL != "" && msg != "") {
+              slackSend(channel: "#temp-mtupitsyn", color: "good", message: msg)
+            // }
           }
         }
       }
