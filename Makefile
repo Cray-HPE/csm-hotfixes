@@ -1,7 +1,7 @@
 SHELL=/usr/bin/env
 .SHELLFLAGS=bash -euo pipefail -c
 GCS_PREFIX=gs://csm-release-public/hotfix
-CSM_RELEASE=1.6
+CSM_RELEASE=1.7
 
 .PHONY: list
 list: pre-flight-checks
