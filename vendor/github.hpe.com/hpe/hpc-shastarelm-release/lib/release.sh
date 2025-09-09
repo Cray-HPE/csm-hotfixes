@@ -1,19 +1,12 @@
 #!/usr/bin/env bash
 
-# Copyright 2020-2022 Hewlett Packard Enterprise Development LP
+# Copyright 2020-2021 Hewlett Packard Enterprise Development LP
 
-: "${PACKAGING_TOOLS_IMAGE:=arti.hpc.amslabs.hpecorp.net/internal-docker-stable-local/packaging-tools:0.13.0}"
+: "${PACKAGING_TOOLS_IMAGE:=arti.hpc.amslabs.hpecorp.net/internal-docker-stable-local/packaging-tools:0.12.3}"
 : "${RPM_TOOLS_IMAGE:=arti.hpc.amslabs.hpecorp.net/internal-docker-stable-local/rpm-tools:1.0.0}"
-: "${SKOPEO_IMAGE:=arti.hpc.amslabs.hpecorp.net/quay-remote/skopeo/stable:v1.13.2}"
-: "${CRAY_NEXUS_SETUP_IMAGE:=arti.hpc.amslabs.hpecorp.net/csm-docker-remote/stable/cray-nexus-setup:0.7.1}"
+: "${SKOPEO_IMAGE:=quay.io/skopeo/stable:v1.4.1}"
+: "${CRAY_NEXUS_SETUP_IMAGE:=artifactory.algol60.net/csm-docker/stable/cray-nexus-setup:0.6.1}"
 : "${ARTIFACTORY_HELPER_IMAGE:=arti.hpc.amslabs.hpecorp.net/dst-docker-master-local/arti-helper:latest}"
-: "${CFS_CONFIG_UTIL_IMAGE:=arti.hpc.amslabs.hpecorp.net/csm-docker-remote/stable/cfs-config-util:3.3.1}"
-: "${LIST_IMAGES_IMAGE:=arti.hpc.amslabs.hpecorp.net/csm-docker-remote/stable/list-images:1.0.0}"
-: "${SNYK_SCAN_IMAGE:=arti.hpc.amslabs.hpecorp.net/csm-docker-remote/stable/snyk-scan:1.1.0}"
-: "${SNYK_AGGREGATE_RESULTS_IMAGE:=arti.hpc.amslabs.hpecorp.net/csm-docker-remote/stable/snyk-aggregate-results:1.0.1}"
-: "${SNYK_TO_HTML_IMAGE:=arti.hpc.amslabs.hpecorp.net/csm-docker-remote/stable/snyk-to-html:1.0.0}"
-: "${CRAY_NLS_IMAGE:=arti.hpc.amslabs.hpecorp.net/csm-docker-remote/stable/cray-nls:0.10.0}"
-
 
 # Prefer to use docker, but for environments with podman
 if [[ "${USE_PODMAN_NOT_DOCKER:-"no"}" == "yes" ]]; then
@@ -21,8 +14,6 @@ if [[ "${USE_PODMAN_NOT_DOCKER:-"no"}" == "yes" ]]; then
     shopt -s expand_aliases
     alias docker=podman
     declare -a podman_run_flags=(--userns keep-id)
-else
-    declare -a podman_run_flags=('') 
 fi
 
 function requires() {
@@ -95,20 +86,12 @@ function helm-sync() {
 
     [[ -d "$destdir" ]] || mkdir -p "$destdir"
 
-    #pass the repo credentials environment variables to the container that runs helm-sync
-    REPO_CREDS_DOCKER_OPTIONS=""
-    REPO_CREDS_HELMSYNC_OPTIONS=""
-    if [ -n "${REPOCREDSVARNAME:-}" ]; then
-        REPO_CREDS_DOCKER_OPTIONS="-e ${REPOCREDSVARNAME}"
-        REPO_CREDS_HELMSYNC_OPTIONS="-c ${REPOCREDSVARNAME}"
-    fi
-    
-    docker run ${REPO_CREDS_DOCKER_OPTIONS} --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
+    docker run --rm -u "$(id -u):$(id -g)" "${podman_run_flags[@]}" \
         ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
         -v "$(realpath "$index"):/index.yaml:ro" \
         -v "$(realpath "$destdir"):/data" \
         "$PACKAGING_TOOLS_IMAGE" \
-        helm-sync ${REPO_CREDS_HELMSYNC_OPTIONS} -n "${HELM_SYNC_NUM_CONCURRENT_DOWNLOADS:-1}" /index.yaml /data
+        helm-sync -n "${HELM_SYNC_NUM_CONCURRENT_DOWNLOADS:-1}" /index.yaml /data
 }
 
 # usage: rpm-sync-latest DIRECTORY ARTIFACTORY_RPM_URL
@@ -119,45 +102,14 @@ function rpm-sync-latest() {
     local artifactory_rpm_release_url="$1"
     local destdir="$2"
 
-    if [ -z "${HPE_ARTIFACTORY_USR}" ] || [ -z "${HPE_ARTIFACTORY_PSW}" ]; then
-      echo 'Artifactory username or password missing, set HPE_ARTIFACTORY_USR & HPE_ARTIFACTORY_PSW environment variables'
-    fi
-
     [[ -d "$destdir" ]] || mkdir -p "$destdir"
 
-    docker run --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
+    docker run --rm -u "$(id -u):$(id -g)" "${podman_run_flags[@]}" \
             ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
             -v "$(realpath "$destdir"):/artifactory/downloads" \
             "$ARTIFACTORY_HELPER_IMAGE" \
-            latest-rpms -r "${artifactory_rpm_release_url}" \
-            -d "/artifactory/downloads" \
-            -u "${HPE_ARTIFACTORY_USR}" \
-            -p "${HPE_ARTIFACTORY_PSW}"
-}
+            latest-rpms -r "${artifactory_rpm_release_url}" -d "${RELEASE_NAME}"
 
-# usage: rpm-sync-src-latest DIRECTORY ARTIFACTORY_RPM_URL
-#
-# Fetches latest RPMs (including src rpms) in the specified ARTIFACTORY_RPM_URL (Arti repo) to the given DIRECTORY/RELEASE_NAME.
-
-function rpm-sync-src-latest() {
-    local artifactory_rpm_release_url="$1"
-    local destdir="$2"
-
-    if [ -z "${HPE_ARTIFACTORY_USR}" ] || [ -z "${HPE_ARTIFACTORY_PSW}" ]; then
-      echo 'Artifactory username or password missing, set HPE_ARTIFACTORY_USR & HPE_ARTIFACTORY_PSW environment variables'
-    fi
-
-    [[ -d "$destdir" ]] || mkdir -p "$destdir"
-
-    docker run --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
-            ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
-            -v "$(realpath "$destdir"):/artifactory/downloads" \
-            "$ARTIFACTORY_HELPER_IMAGE" \
-            latest-rpms -r "${artifactory_rpm_release_url}" \
-            -d "/artifactory/downloads" \
-            -u "${HPE_ARTIFACTORY_USR}" \
-            -p "${HPE_ARTIFACTORY_PSW}" \
-	    --src
 }
 
 # usage: rpm-sync INDEX DIRECTORY
@@ -175,83 +127,23 @@ function rpm-sync() {
 
     [[ -d "$destdir" ]] || mkdir -p "$destdir"
 
-   #pass the repo credentials environment variables to the container that runs rpm-sync
+    #pass the repo credentials environment variables to the container that runs rpm-index
+    REPO_FILENAME=${REPOCREDSFILENAME:-}
+    REPO_FILENAME_PATH=${REPOCREDSPATH:-}
     REPO_CREDS_DOCKER_OPTIONS=""
     REPO_CREDS_RPMSYNC_OPTIONS=""
-    if [ -n "${REPOCREDSVARNAME:-}" ]; then
-        REPO_CREDS_DOCKER_OPTIONS="-e ${REPOCREDSVARNAME}"
-        REPO_CREDS_RPMSYNC_OPTIONS="-c ${REPOCREDSVARNAME}"
+    if [ ! -z "$REPO_FILENAME" ] && [ ! -z "$REPO_FILENAME_PATH" ]; then
+        REPO_CREDS_DOCKER_OPTIONS="--mount type=bind,source=${REPO_FILENAME_PATH},destination=/repo_creds_data"
+        REPO_CREDS_RPMSYNC_OPTIONS="-c /repo_creds_data/${REPO_FILENAME}"
     fi
 
-    docker run ${REPO_CREDS_DOCKER_OPTIONS} --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
+    docker run ${REPO_CREDS_DOCKER_OPTIONS} --rm -u "$(id -u):$(id -g)" "${podman_run_flags[@]}" \
         ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
         -v "$(realpath "$index"):/index.yaml:ro" \
         -v "$(realpath "$destdir"):/data" \
         "$PACKAGING_TOOLS_IMAGE" \
         rpm-sync ${REPO_CREDS_RPMSYNC_OPTIONS} -n "${RPM_SYNC_NUM_CONCURRENT_DOWNLOADS:-1}" ${FAIL_ON_SIG_ERROR} -v -d /data /index.yaml
 }
-
-# usage: extract-from-container SOURCE DESTINATION KEY
-#
-# Extracts files or directories with names matching the regular expression KEY from the directory-formatted
-# Docker image SOURCE to the directory DESTINATION.
-#
-# input:
-#     SOURCE      -- Directory where the Docker image layers reside
-#     DESTINATION -- Directory where the extracted content should be placed; will be created if it does not exist
-#     KEY         -- Key to match against; Key can be a file or a directory; Either the file or entire directory
-#                    is copied to the destination directory; The key can use the wildcards used in regular expressions for grep.
-# Exit codes:
-#     0 - item found and extracted
-#     1 - item not found or extraction failed
-#
-
-function extract-from-container () {
-    local SAVED_SHELLOPTS="${SHELLOPTS}"
-    echo "SHELLOPTS = ${SHELLOPTS}"
-    set +e
-    trap - ERR
-    local SRC_DIR=$1
-    local DEST_DIR=$2
-    local KEY=$3
-
-    if [ "$#" -ne 3 ]; then
-        echo "Expected parameters: <Source Directory> <Destination Directory> <Key>";
-        echo "Received $# parameters: $*"
-        exit 1;
-    fi
-
-    if [ ! -d "${SRC_DIR}" ]; then
-        echo "ERROR -- Source directory: ${SRC_DIR} is not a directory."
-        exit 1;
-    fi
-
-    [[ -d "${DEST_DIR}" ]] || mkdir -p "${DEST_DIR}"
-
-    layers="$(find "${SRC_DIR}" -type f | grep -Ev 'manifest|version')"
-    for i in $layers; do
-        file_matches=$(tar --force-local -tf "${i}" 2> /dev/null | grep -o "${KEY}" | sort -u)
-        if [[ -n "$file_matches" ]]; then
-            local cmd="tar --force-local -xf ${i} -C${DEST_DIR} ${file_matches//$'\n'/ }"
-            echo "$cmd"
-            $cmd
-            echo ""
-            # If key found a directory, move the contents out of the directory.
-            name=$(basename "${file_matches}")
-            if [[ -d "${DEST_DIR}"/"${name}" ]]; then
-                shopt -s dotglob
-                cp -a "${DEST_DIR}"/"${name}"/* "${DEST_DIR}"
-                rm -rf "${DEST_DIR:?}"/"${name}"
-            fi
-        fi
-    done
-    if [[ "${SAVED_SHELLOPTS}" =~ "errexit" ]]; then
-        set -e
-    fi
-    echo "SHELLOPTS = ${SHELLOPTS}"
-
-}
-
 
 # There are some debug statements included in the following Python script and in
 # the skopeo-sync function. These can be removed later, but until we have more
@@ -363,8 +255,8 @@ function get-pyyaml() {
     python3 -m ensurepip || true
     run_cmd pip3 install PyYAML \
             --no-cache-dir \
-            --trusted-host arti.hpc.amslabs.hpecorp.net \
-            --index-url https://arti.hpc.amslabs.hpecorp.net:443/artifactory/api/pypi/pypi-remote/simple \
+            --trusted-host arti.dev.cray.com \
+            --index-url https://arti.dev.cray.com:443/artifactory/api/pypi/pypi-remote/simple \
             --ignore-installed \
             --target="$1" \
             --upgrade || return 1
@@ -450,17 +342,13 @@ function skopeo-sync() {
     while [ true ]; do
         echo "$(date) skopeo-sync: Beginning attempt #${attempt_number}"
         attempt_start_seconds=${SECONDS}
-        skopeo_args=("--retry-times" "5" "--src" "yaml" "--dest" "dir" "--scoped")
-        if [ -n "${ARTIFACTORY_USER:-}" ] && [ -n "${ARTIFACTORY_TOKEN:-}" ]; then
-            skopeo_args+=("--src-creds" "${ARTIFACTORY_USER}:${ARTIFACTORY_TOKEN}")
-        fi
 
-        if docker run --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
+        if docker run --rm -u "$(id -u):$(id -g)" "${podman_run_flags[@]}" \
                 ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
                 -v "$(realpath "$index"):/index.yaml:ro" \
                 -v "$(realpath "$destdir"):/data" \
                 "$SKOPEO_IMAGE" \
-                sync "${skopeo_args[@]}" "/index.yaml" "/data"
+                sync --retry-times 5 --src yaml --dest dir --scoped /index.yaml /data
         then
             function_rc=0
             echo "$(date) skopeo-sync: Attempt #${attempt_number} PASSED!"
@@ -559,7 +447,7 @@ function reposync() {
 
     [[ -d "$destdir" ]] || mkdir -p "$destdir"
 
-    docker run --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
+    docker run --rm -u "$(id -u):$(id -g)" "${podman_run_flags[@]}" \
         ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
         -v "$(realpath "$destdir"):/data" \
         "$RPM_TOOLS_IMAGE" \
@@ -580,61 +468,14 @@ function createrepo() {
         return 1
     fi
 
-    docker run --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
+    docker run --rm -u "$(id -u):$(id -g)" "${podman_run_flags[@]}" \
         ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
         -v "$(realpath "$repodir"):/data" \
         "$RPM_TOOLS_IMAGE" \
         createrepo --verbose /data
 }
 
-# usage: get-skopeo-creds (src-creds|dest-creds) RESOURCE
-#
-# Prints '--src-creds username:password' if auth information is provided
-# through REPOCREDSVARNAME env variable.
-#
-function get-skopeo-creds() {
-    local opt="$1"
-    local resource="$2"
-
-    if [[ -z "$opt" || -z "$resource" ]]; then
-        echo >&2 "usage: get-skopeo-creds (src-creds|dest-creds) RESOURCE"
-        return 1
-    fi
-    if [[ "${resource}" != docker://* ]]; then
-        return 0
-    fi
-    if [[ -z "${REPOCREDSVARNAME}" || -z "${!REPOCREDSVARNAME}" ]]; then
-        return 0
-    fi
-    resource=$(echo "${resource}" | cut -d/ -f3)
-    echo "${!REPOCREDSVARNAME}" | jq -r "to_entries[] | select(.key | startswith(\"https://${resource}\")) | if . == \"\" then \"\" else (\"--${opt} \" + .value.user + \":\" + .value.password) end"
-}
-
-# usage: skopeo-copy SOURCE DESTINATION
-#
-# Uses skopeo copy to copy an image.
-#
-function skopeo-copy() {
-    local src="$1"
-    local dest="$2"
-
-    if [[ -z "$src" || -z "$dest" ]]; then
-        echo >&2 "usage: skopeo-copy SOURCE DESTINATION"
-        return 1
-    fi
-
-    docker run --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
-        ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
-        -v "$(realpath "$destdir"):/data" \
-        "$SKOPEO_IMAGE" copy \
-        $(get-skopeo-creds "src-creds" "${src}") \
-        $(get-skopeo-creds "dest-creds" "${dest}") \
-        "${src}" "${dest}"
-}
-
-# usage: vendor-install-deps [--no-cray-nexus-setup] [--no-skopeo]
-#                            [--include-cfs-config-util] [--include-rpm-tools]
-#                            RELEASE DIRECTORY
+# usage: vendor-install-deps [--no-cray-nexus-setup] [--no-skopeo] RELEASE DIRECTORY
 #
 # Vendors installation tools for a specified RELEASE to the given DIRECTORY.
 #
@@ -643,8 +484,6 @@ function skopeo-copy() {
 function vendor-install-deps() {
     local include_nexus="yes"
     local include_skopeo="yes"
-    local include_cfs_config_util="no"
-    local include_rpm_tools="no"
 
     while [[ $# -gt 2 ]]; do
         local opt="$1"
@@ -652,8 +491,6 @@ function vendor-install-deps() {
         case "$opt" in
         --no-cray-nexus-setup) include_nexus="no" ;;
         --no-skopeo) include_skopeo="no" ;;
-        --include-cfs-config-util) include_cfs_config_util="yes" ;;
-        --include-rpm-tools) include_rpm_tools="yes" ;;
         --) break ;;
         --*) echo >&2 "error: unsupported option: $opt"; exit 2 ;; 
         *)  break ;;
@@ -666,19 +503,19 @@ function vendor-install-deps() {
     [[ -d "$destdir" ]] || mkdir -p "$destdir"
 
     if [[ "${include_nexus:-"yes"}" == "yes" ]]; then
-        skopeo-copy "docker://${CRAY_NEXUS_SETUP_IMAGE}" "docker-archive:/data/cray-nexus-setup.tar:cray-nexus-setup:${release}"
+        docker run --rm -u "$(id -u):$(id -g)" "${podman_run_flags[@]}" \
+            ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
+            -v "$(realpath "$destdir"):/data" \
+            "$SKOPEO_IMAGE" \
+            copy "docker://${CRAY_NEXUS_SETUP_IMAGE}" "docker-archive:/data/cray-nexus-setup.tar:cray-nexus-setup:${release}" || return
     fi
 
     if [[ "${include_skopeo:-"yes"}" == "yes" ]]; then
-        skopeo-copy "docker://${SKOPEO_IMAGE}" "docker-archive:/data/skopeo.tar:skopeo:${release}"
-    fi
-
-    if [[ "${include_cfs_config_util:-"no"}" == "yes" ]]; then
-        skopeo-copy "docker://${CFS_CONFIG_UTIL_IMAGE}" "docker-archive:/data/cfs-config-util.tar:cfs-config-util:${release}"
-    fi
-
-    if [[ "${include_rpm_tools:-"no"}" == "yes" ]]; then
-        skopeo-copy "docker://${RPM_TOOLS_IMAGE}" "docker-archive:/data/rpm-tools.tar:rpm-tools:${release}"
+        docker run --rm -u "$(id -u):$(id -g)" "${podman_run_flags[@]}" \
+            ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
+            -v "$(realpath "$destdir"):/data" \
+            "$SKOPEO_IMAGE" \
+            copy "docker://${SKOPEO_IMAGE}" "docker-archive:/data/skopeo.tar:skopeo:${release}"
     fi
 }
 
@@ -711,107 +548,4 @@ else
     esac
 fi
 EOF
-}
-
-# usage: list-images INDEX_FILE [INDEX_FILE ... ]
-#
-# Reads one or more index.yaml files specifying container image locations
-# and writes a list to stdout.
-function list-images() {
-    local index_files="$*"
-    local index_file file_path
-    declare -a file_paths
-    declare -a file_mount_options
-    # Get full paths of each file
-    for index_file in $index_files; do
-        file_path="$(realpath "$index_file")"
-        file_paths+=( "$file_path" )
-        file_mount_options+=( "--mount" )
-        file_mount_options+=( "type=bind,src=${file_path},target=${file_path},ro=true" )
-    done
-
-    docker run --user "$(id -u):$(id -g)" --rm "${file_mount_options[@]}" \
-         $LIST_IMAGES_IMAGE "${file_paths[@]}"
-}
-
-# usage: snyk-scan IMAGE [WORKDIR]
-#
-# Scans a container image with Snyk. This will output results
-# into the current working directory.
-function snyk-scan() {
-    local image="$1"
-    local image_basename
-    image_basename="$(basename "$image")"
-    snyk_environment_arguments=("--env" "SNYK_TOKEN=${SNYK_TOKEN}")
-    if [ -n "${ARTIFACTORY_USER:-}" ] && [ -n "{$ARTIFACTORY_TOKEN:-}" ]; then
-        snyk_environment_arguments+=("--env" "SNYK_REGISTRY_USERNAME=${ARTIFACTORY_USER}"
-                                     "--env" "SNYK_REGISTRY_PASSWORD=${ARTIFACTORY_TOKEN}")
-    fi
-
-    docker run --user "$(id -u):$(id -g)" --rm "${snyk_environment_arguments[@]}" \
-        --mount "type=bind,src=${PWD},target=/workdir" \
-        "$SNYK_SCAN_IMAGE" "/workdir" "$image" "$image_basename"
-}
-
-# usage: snyk-aggregate-results [--helm-chart-map MAP.csv] SNYK_RESULTS_FILE [SNYK_RESULTS_FILE ...]
-#
-# Aggregates results from one or more `snyk.json` files (the results from snyk-scan)
-# and creates an Excel spreadsheet from them. The spreadsheet is saved to the current
-# working directory. Optionally, pass in a CSV file containing a mapping of containers
-# to helm charts.
-function snyk-aggregate-results() {
-    local args="$*"
-    local container_args file_mount_options arg
-    declare -a container_args
-    declare -a file_mount_options
-    for arg in ${args}; do
-        # If arg is not an option string, then assume it is a file which needs to be mounted.
-        if [[ "$arg" != --* ]]; then
-          file_path="$(realpath "$arg")"
-          container_args+=( "$file_path" )
-          file_mount_options+=( "--mount" )
-          file_mount_options+=( "type=bind,src=${file_path},target=${file_path},ro=true" )
-        else
-          container_args+=( "$arg" )
-        fi
-    done
-    docker run --user "$(id -u):$(id -g)" --rm "${file_mount_options[@]}" \
-        --mount "type=bind,src=${PWD},target=/workdir" \
-        "$SNYK_AGGREGATE_RESULTS_IMAGE" -o "/workdir/snyk.xlsx" "${container_args[@]}"
-}
-
-# usage: snyk-to-html SNYK_RESULTS_DIR
-#
-# Aggregates results from one or more `snyk.json` files (the results from snyk-scan)
-# and creates HTML reports from them. Unlike snyk-aggregate-results which creates a single
-# spreadsheet from multiple snyk results files, this function creates one HTML report per snyk
-# results file. These files are saved in the same directory as `snyk.json`.
-function snyk-to-html() {
-    snyk_results_files="$*"
-    local results_file results_file_dir results_filename
-    for results_file in ${snyk_results_files}; do
-        results_file_dir="$(dirname "$(realpath "$results_file")")"
-        results_filename="$(basename "$results_file")"
-        docker run --user "$(id -u):$(id -g)" --rm \
-            --mount "type=bind,src=${results_file_dir},target=/workdir" \
-            "$SNYK_TO_HTML_IMAGE" -i "/workdir/${results_filename}" -o "/workdir/snyk.html"
-    done
-}
-
-# usage: iuf-validate IUF_PRODUCT_MANIFEST_FILE
-#
-# Validates the given Installation and Upgrade Framework (IUF) Product Manifest
-# file against the IUF Product Manifest schema. On successful validation, the
-# function returns 0. On a failed validation, the errors are printed to stderr,
-# and the function returns 1.
-function iuf-validate() {
-    local manifest_file="$1"
-    local manifest_basename
-    manifest_basename="$(basename "$manifest_file")"
-
-    docker run --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
-        ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
-        -v "$(realpath "$manifest_file"):/$manifest_basename" \
-        "$CRAY_NLS_IMAGE" \
-        validate "/$manifest_basename"
 }
