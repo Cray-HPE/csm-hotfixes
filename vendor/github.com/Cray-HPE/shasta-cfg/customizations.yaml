@@ -67,11 +67,13 @@ spec:
       - '{{ kubernetes.services[''cray-sysmgmt-health''][''kube-prometheus-stack''].prometheus.prometheusSpec.externalAuthority }}'
       - '{{ kubernetes.services[''cray-sysmgmt-health''][''kube-prometheus-stack''].alertmanager.alertmanagerSpec.externalAuthority }}'
       - '{{ kubernetes.services[''cray-sysmgmt-health''][''kube-prometheus-stack''].grafana.externalAuthority }}'
+      - '{{ kubernetes.services[''cray-sysmgmt-health''][''kube-prometheus-stack''].thanos.thanosSpec.externalAuthority }}'
       - '{{ kubernetes.services.gitea.externalHostname }}'
       - '{{ kubernetes.services[''cray-nls''].externalHostname }}'
       - sma-grafana.cmn.{{ network.dns.external }}
       - sma-kibana.cmn.{{network.dns.external}}
       - sma-dashboards.cmn.{{network.dns.external}}
+      - sma-pcim.cmn.{{network.dns.external}}
       - csms.cmn.{{ network.dns.external }}
       - argo.cmn.{{ network.dns.external }}
       - ara.cmn.{{ network.dns.external }}
@@ -349,6 +351,7 @@ spec:
             - api-gw-service.local
             - api-gw-service-nmn.local
             - istio-ingressgateway.istio-system.svc.cluster.local
+            - istio-ingressgateway-cmn.istio-system.svc.cluster.local
             - '*.cmn.{{ network.dns.external }}'
             - '*.can.{{ network.dns.external }}'
             - '*.chn.{{ network.dns.external }}'
@@ -530,11 +533,20 @@ spec:
             # Skip plugin installation for airgaped systems.
             # If the system is non airgaped then you can comment out or remove plugins property.
             plugins: ""
+          thanos:
+            thanosSpec:
+              externalAuthority: thanos.cmn.{{ network.dns.external }}
+              externalUrl: https://{{ kubernetes.services['cray-sysmgmt-health']['kube-prometheus-stack'].thanos.thanosSpec.externalAuthority }}/
+            s3_endpoint: '{{network.dns.internal_s3 }}'
         cephExporter:
           endpoints: '{{ network.netstaticips.nmn_ncn_storage_mons }}'
         cephNodeExporter:
           endpoints: '{{ network.netstaticips.nmn_ncn_storage }}'
           enabled: true
+        thanosCompactor:
+          resolutionraw: 15d
+          resolution5m: 15d
+          resolution1h: 15d
       cray-hms-reds:
         cray-service:
           sealedSecrets:
@@ -626,6 +638,15 @@ spec:
           resources:
             requests:
               storage: 188Gi
+      sma-opensearch:
+        opensearchJavaOpts: -Xmx30g -Xms30g
+        resources:
+          requests:
+            cpu: "4"
+            memory: 16Gi
+        persistence:
+          storage: sma-block-replicated
+          size: 188Gi
       sma-es-curator:
         es_max_index_age: 7
         es_disk_highwater: 95
@@ -670,11 +691,20 @@ spec:
                 requests:
                   cpu: "1"
                   memory: 2Gi
-      sma-dashboards:
+      sma-opensearch-dashboards:
         externalAuthority: sma-dashboards.cmn.{{ network.dns.external }}
         cray-service:
           containers:
             sma-dashboards:
+              resources:
+                requests:
+                  cpu: "1"
+                  memory: 2Gi
+      sma-pcim:
+        externalAuthority: sma-pcim.cmn.{{ network.dns.external }}
+        cray-service:
+          containers:
+            sma-pcim:
               resources:
                 requests:
                   cpu: "1"
@@ -731,8 +761,6 @@ spec:
         ingresses:
           ingressgateway:
             issuers:
-              shasta-cmn: https://api.cmn.{{ network.dns.external }}/keycloak/realms/shasta
-              keycloak-cmn: https://auth.cmn.{{ network.dns.external }}/keycloak/realms/shasta
               shasta-nmn: https://api.nmnlb.{{ network.dns.external }}/keycloak/realms/shasta
               keycloak-nmn: https://auth.nmnlb.{{ network.dns.external }}/keycloak/realms/shasta
           ingressgateway-customer-admin:
@@ -758,6 +786,38 @@ spec:
           - '{{ kubernetes.sealed_secrets.keycloak_users_localize | toYaml }}'
       cray-hms-bss:
         addvertisAddress: http://{{ network.netstaticips.nmn_api_gw_local }}:8888
+        cray-service:
+          containers:
+            cray-bss:
+              env:
+              - name: HSM_URL
+                value: http://cray-smd
+              - name: NFD_URL
+                value: http://cray-hmnfd
+              - name: SPIRE_TOKEN_URL
+                value: https://cray-spire-tokens.spire:54440
+              - name: S3_ENDPOINT
+                valueFrom:
+                  secretKeyRef:
+                    key: http_s3_endpoint
+                    name: bss-s3-credentials
+              - name: S3_BUCKET
+                value: boot-image
+              - name: S3_ACCESS_KEY
+                valueFrom:
+                  secretKeyRef:
+                    key: access_key
+                    name: bss-s3-credentials
+              - name: S3_SECRET_KEY
+                valueFrom:
+                  secretKeyRef:
+                    key: secret_key
+                    name: bss-s3-credentials
+              - name: BSS_ADVERTISE_ADDRESS
+                valueFrom:
+                  configMapKeyRef:
+                    key: addvertisAddress
+                    name: bss-env-config
       gatekeeper-policy-manager:
         gatekeeper-policy-manager:
           externalAuthority: opa-gpm.cmn.{{ network.dns.external }}
