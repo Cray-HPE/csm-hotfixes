@@ -2,9 +2,9 @@
 
 # Copyright 2020-2022 Hewlett Packard Enterprise Development LP
 
-: "${PACKAGING_TOOLS_IMAGE:=arti.hpc.amslabs.hpecorp.net/internal-docker-stable-local/packaging-tools:0.13.0}"
+: "${PACKAGING_TOOLS_IMAGE:=arti.hpc.amslabs.hpecorp.net/internal-docker-stable-local/packaging-tools:0.12.6}"
 : "${RPM_TOOLS_IMAGE:=arti.hpc.amslabs.hpecorp.net/internal-docker-stable-local/rpm-tools:1.0.0}"
-: "${SKOPEO_IMAGE:=arti.hpc.amslabs.hpecorp.net/quay-remote/skopeo/stable:v1.13.2}"
+: "${SKOPEO_IMAGE:=arti.hpc.amslabs.hpecorp.net/quay-remote/skopeo/stable:v1.4.1}"
 : "${CRAY_NEXUS_SETUP_IMAGE:=arti.hpc.amslabs.hpecorp.net/csm-docker-remote/stable/cray-nexus-setup:0.7.1}"
 : "${ARTIFACTORY_HELPER_IMAGE:=arti.hpc.amslabs.hpecorp.net/dst-docker-master-local/arti-helper:latest}"
 : "${CFS_CONFIG_UTIL_IMAGE:=arti.hpc.amslabs.hpecorp.net/csm-docker-remote/stable/cfs-config-util:3.3.1}"
@@ -98,7 +98,7 @@ function helm-sync() {
     #pass the repo credentials environment variables to the container that runs helm-sync
     REPO_CREDS_DOCKER_OPTIONS=""
     REPO_CREDS_HELMSYNC_OPTIONS=""
-    if [ -n "${REPOCREDSVARNAME:-}" ]; then
+    if [ ! -z "$REPOCREDSVARNAME" ]; then
         REPO_CREDS_DOCKER_OPTIONS="-e ${REPOCREDSVARNAME}"
         REPO_CREDS_HELMSYNC_OPTIONS="-c ${REPOCREDSVARNAME}"
     fi
@@ -178,7 +178,7 @@ function rpm-sync() {
    #pass the repo credentials environment variables to the container that runs rpm-sync
     REPO_CREDS_DOCKER_OPTIONS=""
     REPO_CREDS_RPMSYNC_OPTIONS=""
-    if [ -n "${REPOCREDSVARNAME:-}" ]; then
+    if [ ! -z "$REPOCREDSVARNAME" ]; then
         REPO_CREDS_DOCKER_OPTIONS="-e ${REPOCREDSVARNAME}"
         REPO_CREDS_RPMSYNC_OPTIONS="-c ${REPOCREDSVARNAME}"
     fi
@@ -207,8 +207,6 @@ function rpm-sync() {
 #
 
 function extract-from-container () {
-    local SAVED_SHELLOPTS="${SHELLOPTS}"
-    echo "SHELLOPTS = ${SHELLOPTS}"
     set +e
     trap - ERR
     local SRC_DIR=$1
@@ -245,11 +243,6 @@ function extract-from-container () {
             fi
         fi
     done
-    if [[ "${SAVED_SHELLOPTS}" =~ "errexit" ]]; then
-        set -e
-    fi
-    echo "SHELLOPTS = ${SHELLOPTS}"
-
 }
 
 
@@ -451,7 +444,7 @@ function skopeo-sync() {
         echo "$(date) skopeo-sync: Beginning attempt #${attempt_number}"
         attempt_start_seconds=${SECONDS}
         skopeo_args=("--retry-times" "5" "--src" "yaml" "--dest" "dir" "--scoped")
-        if [ -n "${ARTIFACTORY_USER:-}" ] && [ -n "${ARTIFACTORY_TOKEN:-}" ]; then
+        if [ -n "$ARTIFACTORY_USER" ] && [ -n "$ARTIFACTORY_TOKEN" ]; then
             skopeo_args+=("--src-creds" "${ARTIFACTORY_USER}:${ARTIFACTORY_TOKEN}")
         fi
 
@@ -587,53 +580,8 @@ function createrepo() {
         createrepo --verbose /data
 }
 
-# usage: get-skopeo-creds (src-creds|dest-creds) RESOURCE
-#
-# Prints '--src-creds username:password' if auth information is provided
-# through REPOCREDSVARNAME env variable.
-#
-function get-skopeo-creds() {
-    local opt="$1"
-    local resource="$2"
-
-    if [[ -z "$opt" || -z "$resource" ]]; then
-        echo >&2 "usage: get-skopeo-creds (src-creds|dest-creds) RESOURCE"
-        return 1
-    fi
-    if [[ "${resource}" != docker://* ]]; then
-        return 0
-    fi
-    if [[ -z "${REPOCREDSVARNAME}" || -z "${!REPOCREDSVARNAME}" ]]; then
-        return 0
-    fi
-    resource=$(echo "${resource}" | cut -d/ -f3)
-    echo "${!REPOCREDSVARNAME}" | jq -r "to_entries[] | select(.key | startswith(\"https://${resource}\")) | if . == \"\" then \"\" else (\"--${opt} \" + .value.user + \":\" + .value.password) end"
-}
-
-# usage: skopeo-copy SOURCE DESTINATION
-#
-# Uses skopeo copy to copy an image.
-#
-function skopeo-copy() {
-    local src="$1"
-    local dest="$2"
-
-    if [[ -z "$src" || -z "$dest" ]]; then
-        echo >&2 "usage: skopeo-copy SOURCE DESTINATION"
-        return 1
-    fi
-
-    docker run --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
-        ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
-        -v "$(realpath "$destdir"):/data" \
-        "$SKOPEO_IMAGE" copy \
-        $(get-skopeo-creds "src-creds" "${src}") \
-        $(get-skopeo-creds "dest-creds" "${dest}") \
-        "${src}" "${dest}"
-}
-
 # usage: vendor-install-deps [--no-cray-nexus-setup] [--no-skopeo]
-#                            [--include-cfs-config-util] [--include-rpm-tools]
+#                            [--include-cfs-config-util]
 #                            RELEASE DIRECTORY
 #
 # Vendors installation tools for a specified RELEASE to the given DIRECTORY.
@@ -644,7 +592,6 @@ function vendor-install-deps() {
     local include_nexus="yes"
     local include_skopeo="yes"
     local include_cfs_config_util="no"
-    local include_rpm_tools="no"
 
     while [[ $# -gt 2 ]]; do
         local opt="$1"
@@ -653,7 +600,6 @@ function vendor-install-deps() {
         --no-cray-nexus-setup) include_nexus="no" ;;
         --no-skopeo) include_skopeo="no" ;;
         --include-cfs-config-util) include_cfs_config_util="yes" ;;
-        --include-rpm-tools) include_rpm_tools="yes" ;;
         --) break ;;
         --*) echo >&2 "error: unsupported option: $opt"; exit 2 ;; 
         *)  break ;;
@@ -666,19 +612,27 @@ function vendor-install-deps() {
     [[ -d "$destdir" ]] || mkdir -p "$destdir"
 
     if [[ "${include_nexus:-"yes"}" == "yes" ]]; then
-        skopeo-copy "docker://${CRAY_NEXUS_SETUP_IMAGE}" "docker-archive:/data/cray-nexus-setup.tar:cray-nexus-setup:${release}"
+        docker run --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
+            ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
+            -v "$(realpath "$destdir"):/data" \
+            "$SKOPEO_IMAGE" \
+            copy "docker://${CRAY_NEXUS_SETUP_IMAGE}" "docker-archive:/data/cray-nexus-setup.tar:cray-nexus-setup:${release}"
     fi
 
     if [[ "${include_skopeo:-"yes"}" == "yes" ]]; then
-        skopeo-copy "docker://${SKOPEO_IMAGE}" "docker-archive:/data/skopeo.tar:skopeo:${release}"
+        docker run --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
+            ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
+            -v "$(realpath "$destdir"):/data" \
+            "$SKOPEO_IMAGE" \
+            copy "docker://${SKOPEO_IMAGE}" "docker-archive:/data/skopeo.tar:skopeo:${release}"
     fi
 
     if [[ "${include_cfs_config_util:-"no"}" == "yes" ]]; then
-        skopeo-copy "docker://${CFS_CONFIG_UTIL_IMAGE}" "docker-archive:/data/cfs-config-util.tar:cfs-config-util:${release}"
-    fi
-
-    if [[ "${include_rpm_tools:-"no"}" == "yes" ]]; then
-        skopeo-copy "docker://${RPM_TOOLS_IMAGE}" "docker-archive:/data/rpm-tools.tar:rpm-tools:${release}"
+        docker run --rm -u "$(id -u):$(id -g)" ${podman_run_flags[@]} \
+            ${DOCKER_NETWORK:+"--network=${DOCKER_NETWORK}"} \
+            -v "$(realpath "$destdir"):/data" \
+            "$SKOPEO_IMAGE" \
+            copy "docker://${CFS_CONFIG_UTIL_IMAGE}" "docker-archive:/data/cfs-config-util.tar:cfs-config-util:${release}"
     fi
 }
 
@@ -743,7 +697,7 @@ function snyk-scan() {
     local image_basename
     image_basename="$(basename "$image")"
     snyk_environment_arguments=("--env" "SNYK_TOKEN=${SNYK_TOKEN}")
-    if [ -n "${ARTIFACTORY_USER:-}" ] && [ -n "{$ARTIFACTORY_TOKEN:-}" ]; then
+    if [ -n "$ARTIFACTORY_USER" ] && [ -n "$ARTIFACTORY_TOKEN" ]; then
         snyk_environment_arguments+=("--env" "SNYK_REGISTRY_USERNAME=${ARTIFACTORY_USER}"
                                      "--env" "SNYK_REGISTRY_PASSWORD=${ARTIFACTORY_TOKEN}")
     fi
