@@ -25,18 +25,20 @@ dist/build.txt:
 
 .PHONY: build
 build: dist/build.txt
-	@echo "Hotfixes to build:"
-	@cat dist/build.txt
 	@while read VERSION_SH; do \
-		HOTFIX_DIR="$${VERSION_SH%%/lib/version.sh}"; \
-		echo "Building $${HOTFIX_DIR}"; \
-		./release.sh "$${HOTFIX_DIR}"; \
+		HOTFIX_NAME=$$(eval "$${VERSION_SH}"); \
+		if [ -f dist/$${HOTFIX_NAME}.tar.gz ]; then \
+			echo "Hotfix dist/$${HOTFIX_NAME}.tar/gz is already built"; \
+		else \
+			echo "Building dist/$${HOTFIX_NAME}.tar/gz"; \
+			HOTFIX_DIR="$${VERSION_SH%%/lib/version.sh}"; \
+			echo "Building $${HOTFIX_DIR}"; \
+			./release.sh "$${HOTFIX_DIR}"; \
+		fi; \
 	done < dist/build.txt
 
 .PHONY: upload
 upload: build
-	@echo "Hotfixes to upload:"
-	@cat dist/build.txt
 	@rm -f dist/slack.txt
 	@touch dist/slack.txt
 	@while read VERSION_SH; do \
@@ -45,9 +47,9 @@ upload: build
 		cd dist; \
 		sha256sum $${HOTFIX_NAME}.tar.gz > $${HOTFIX_NAME}.tar.gz.sha256.txt; \
 		cd ..; \
-		echo -ne "Uploading csm-$(CSM_RELEASE)/$${HOTFIX_NAME} ... "; \
-		echo gsutil cp -n "dist/$${HOTFIX_NAME}.tar.gz" "$${GCS_URL}"; \
-		echo gsutil cp -n "dist/$${HOTFIX_NAME}.tar.gz.sha256.txt" "$${GCS_URL}.sha256.txt"; \
+		echo -ne "Uploading csm-$(CSM_RELEASE)/$${HOTFIX_NAME}.tar.gz ... "; \
+		gsutil cp -n "dist/$${HOTFIX_NAME}.tar.gz" "$${GCS_URL}"; \
+		gsutil cp -n "dist/$${HOTFIX_NAME}.tar.gz.sha256.txt" "$${GCS_URL}.sha256.txt"; \
 		echo "Hotfix $${HOTFIX_NAME} uploaded to $${GCS_URL}" >> dist/slack.txt; \
 	done < dist/build.txt
 
