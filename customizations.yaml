@@ -62,16 +62,19 @@ spec:
   proxiedWebAppExternalHostnames:
     customerManagement:
       - '{{ kubernetes.services[''gatekeeper-policy-manager''][''gatekeeper-policy-manager''].externalAuthority }}'
-      - '{{ kubernetes.services[''cray-istio''].istio.tracing.externalAuthority }}'
+      - '{{ kubernetes.services[''cray-istio-ingress''].istio.tracing.externalAuthority }}'
       - '{{ kubernetes.services[''cray-kiali''].externalAuthority }}'
-      - '{{ kubernetes.services[''cray-sysmgmt-health''][''kube-prometheus-stack''].prometheus.prometheusSpec.externalAuthority }}'
-      - '{{ kubernetes.services[''cray-sysmgmt-health''][''kube-prometheus-stack''].alertmanager.alertmanagerSpec.externalAuthority }}'
-      - '{{ kubernetes.services[''cray-sysmgmt-health''][''kube-prometheus-stack''].grafana.externalAuthority }}'
+      - '{{ kubernetes.services[''cray-sysmgmt-health''][''victoria-metrics-k8s-stack''].vmselect.vmselectSpec.externalAuthority }}'
+      - '{{ kubernetes.services[''cray-sysmgmt-health''][''victoria-metrics-k8s-stack''].vmagent.vmagentSpec.externalAuthority }}'
+      - '{{ kubernetes.services[''cray-sysmgmt-health''][''victoria-metrics-k8s-stack''].alertmanager.externalAuthority }}'
+      - '{{ kubernetes.services[''cray-sysmgmt-health''][''victoria-metrics-k8s-stack''].grafana.externalAuthority }}'
       - '{{ kubernetes.services.gitea.externalHostname }}'
       - '{{ kubernetes.services[''cray-nls''].externalHostname }}'
+      - '{{ kubernetes.services[''cray-hubble''].externalHostname }}'
       - sma-grafana.cmn.{{ network.dns.external }}
       - sma-kibana.cmn.{{network.dns.external}}
       - sma-dashboards.cmn.{{network.dns.external}}
+      - sma-pcim.cmn.{{network.dns.external}}
       - csms.cmn.{{ network.dns.external }}
       - argo.cmn.{{ network.dns.external }}
       - ara.cmn.{{ network.dns.external }}
@@ -332,7 +335,7 @@ spec:
         api_gw:
           api_gw_service_name: istio-ingressgateway
           api_gw_service_namespace: istio-system
-      cray-istio:
+      cray-istio-ingress:
         # Override for the ingress-gateway certificate (requested from
         # cert-manager). The list of master nodes must be reviewed and
         # updated per system until a source exists from which to dynamically
@@ -349,6 +352,7 @@ spec:
             - api-gw-service.local
             - api-gw-service-nmn.local
             - istio-ingressgateway.istio-system.svc.cluster.local
+            - istio-ingressgateway-cmn.istio-system.svc.cluster.local
             - '*.cmn.{{ network.dns.external }}'
             - '*.can.{{ network.dns.external }}'
             - '*.chn.{{ network.dns.external }}'
@@ -381,7 +385,7 @@ spec:
           istio-ingressgateway-cmn:
             serviceAnnotations:
               metallb.universe.tf/address-pool: customer-management
-              external-dns.alpha.kubernetes.io/hostname: 'api.cmn.{{ network.dns.external }},auth.cmn.{{ network.dns.external }},nexus.cmn.{{ network.dns.external }}'
+              external-dns.alpha.kubernetes.io/hostname: 'api.cmn.{{ network.dns.external }},auth.cmn.{{ network.dns.external }},nexus.cmn.{{ network.dns.external }},vault.cmn.{{ network.dns.external }}'
           istio-ingressgateway-chn:
             serviceAnnotations:
               metallb.universe.tf/address-pool: customer-high-speed
@@ -421,10 +425,7 @@ spec:
             spec:
               external_services:
                 grafana:
-                  url: https://{{ kubernetes.services['cray-sysmgmt-health']['kube-prometheus-stack'].grafana.externalAuthority }}/
-      cray-metallb:
-        metallb:
-          configInline: '{{ network.metallb | toYaml }}'
+                  url: https://{{ kubernetes.services['cray-sysmgmt-health']['victoria-metrics-k8s-stack'].grafana.externalAuthority }}/
       cray-munge:
         sealedSecrets:
           - '{{ kubernetes.sealed_secrets.munge | toYaml }}'
@@ -514,17 +515,20 @@ spec:
         slurmctld_ip: '{{ wlm.wlmstaticips.slurmctld }}'
         slurmdbd_ip: '{{ wlm.wlmstaticips.slurmdbd }}'
       cray-sysmgmt-health:
-        kube-prometheus-stack:
+        victoria-metrics-k8s-stack:
           kubeEtcd:
             endpoints: '{{ network.netstaticips.nmn_ncn_masters }}'
-          prometheus:
-            prometheusSpec:
-              externalAuthority: prometheus.cmn.{{ network.dns.external }}
-              externalUrl: https://{{ kubernetes.services['cray-sysmgmt-health']['kube-prometheus-stack'].prometheus.prometheusSpec.externalAuthority }}/
+          vmagent:
+            vmagentSpec:
+              externalAuthority: vmagent.cmn.{{ network.dns.external }}
+              externalUrl: https://{{ kubernetes.services['cray-sysmgmt-health']['victoria-metrics-k8s-stack'].vmagent.vmagentSpec.externalAuthority }}/
+          vmselect:
+            vmselectSpec:
+              externalAuthority: vmselect.cmn.{{ network.dns.external }}
+              externalUrl: https://{{ kubernetes.services['cray-sysmgmt-health']['victoria-metrics-k8s-stack'].vmselect.vmselectSpec.externalAuthority }}/
           alertmanager:
-            alertmanagerSpec:
-              externalAuthority: alertmanager.cmn.{{ network.dns.external }}
-              externalUrl: https://{{ kubernetes.services['cray-sysmgmt-health']['kube-prometheus-stack'].alertmanager.alertmanagerSpec.externalAuthority }}/
+            externalAuthority: alertmanager.cmn.{{ network.dns.external }}
+            externalUrl: https://{{ kubernetes.services['cray-sysmgmt-health']['victoria-metrics-k8s-stack'].alertmanager.externalAuthority }}/
           grafana:
             externalAuthority: grafana.cmn.{{ network.dns.external }}
             # Skip plugin installation for airgaped systems.
@@ -535,10 +539,9 @@ spec:
         cephNodeExporter:
           endpoints: '{{ network.netstaticips.nmn_ncn_storage }}'
           enabled: true
-      cray-hms-reds:
-        cray-service:
-          sealedSecrets:
-            - '{{ kubernetes.sealed_secrets.cray_reds_credentials | toYaml }}'
+      cray-hms-discovery:
+        sealedSecrets:
+          - '{{ kubernetes.sealed_secrets.cray_reds_credentials | toYaml }}'
       cray-rm-pals:
         cray-service:
           sealedSecrets:
@@ -554,20 +557,6 @@ spec:
         storage_shared_size_cray_tftp: 5Gi
         nmn_tftp_service_ip: '{{ network.netstaticips.nmn_tftp }}'
         hmn_tftp_service_ip: '{{ network.netstaticips.hmn_tftp }}'
-      cray-uas-mgr:
-        uasConfig:
-          uai_macvlan_interface: '{{ wlm.macvlansetup.nmn_vlan }}'
-          uai_macvlan_network: '{{ wlm.macvlansetup.nmn_supernet }}'
-          uai_macvlan_range_start: '{{ wlm.macvlansetup.nmn_reservation_start }}'
-          uai_macvlan_range_end: '{{ wlm.macvlansetup.nmn_reservation_end }}'
-          uai_macvlan_routes: '{{ wlm.macvlansetup.routes }}'
-          uas_ssh_lb_pool: customer-access
-          require_bican: false
-          dns_domain: '{{ network.dns.external }}'
-          images:
-            images:
-              - cray/cray-uai-sles15sp1:latest
-            defaultImage: cray/cray-uai-sles15sp1:latest
       cray-vault:
         sealedSecrets:
           - '{{ kubernetes.sealed_secrets.gen_platform_ca_1 | toYaml }}'
@@ -578,6 +567,8 @@ spec:
             private_key: int_ca.key
             certificate: int_ca.crt
             ca_bundle: root_ca.crt
+        ingress:
+            host: vault.cmn.{{ network.dns.external }}
       cfs-ara:
         externalHostname: ara.cmn.{{ network.dns.external }}
       gitea:
@@ -594,6 +585,72 @@ spec:
         config:
           server:
             authJwksUrl: http://cray-keycloak-http.services.svc.cluster.local/keycloak/realms/shasta/protocol/openid-connect/certs
+      cray-kyverno-policies-upstream:
+        pssFailureAction: Enforce
+      image-verification-policy:
+        checkImagePolicy:
+          validationFailureAction: Enforce
+          failurePolicy: Ignore
+          background: true
+          admission: true
+          emitWarning: false
+          rules:
+            - name: check-image
+              # Refer to `kubectl explain clusterpolicy.spec.rules.exclude` for exclude block syntax.
+              match:
+                any:
+                - resources:
+                    kinds:
+                    - Pod
+                    # Image verification policy is not targeted to the Cluster in Audit mode
+              verifyImages:
+              - imageReferences:
+                - 'registry.local/*'
+                mutateDigest: false
+                required: true
+                verifyDigest: false
+                attestors:
+                - count: 1
+                  entries:
+                  - keys:
+                      ctlog:
+                        ignoreSCT: true
+                      rekor:
+                        ignoreTlog: true
+                      signatureAlgorithm: sha256
+                      publicKeys: |-
+                        -----BEGIN PUBLIC KEY-----
+                        MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEApmSs9Qa6o3E8sYAlM64n
+                        1cL0RG6Jdc6pG78B1P3s67xZTO76vxYuA0wfS8cvzPsUFHi5YcJEEBkFcDAUAEuk
+                        3IW7vp054H9mcMKUUcDtdcBCvuwuQHkOJQNNay+FGuNLHUaZDyuEdVxHeKnpT04C
+                        UDmJrp70xOJwMAhhiYKHItm+cK3FlHF77okLus4f/h+PW4d9rf0u9/tNAdMYINfe
+                        D8m5qdPyE4P0hjnaEOV9sxvW3NmC0nY2DaY092BFqYN0mQ8hnHNaFj6dUJpLPOxc
+                        nGmTiz0eJU8ZMNoYblRGUrgQoS/PkJKCBa/MZb/RYqmlfYOhLWPGgntUTBD38ydk
+                        NavrPcGZscv3LfJZq/qag/osNMGgSrkoLsFaYYc8ruHVgs0zmSpNSezih6myPfJS
+                        xDOBbTahWJt1giIgtFzP4zxys05srBE9p/OhlmC63PhEUdoueVzGf4LpEc/k8yMk
+                        /VHhJMZ7VRzDreZF5GfiQJSbJ8Cta9JQEOAC9jvwOcV4p34/xyuGF08dysXdx3dU
+                        7Kn3VGKApMeMSB3NChillFz/lG8f02fGeB3lBxHtbv+k2L59HAlERNMADfREolmu
+                        cnR6uEeG/nWNlsmV2/8STOFUIYoNwTZyZ9BbKLZgzK27TuogXhXdI4EyOk0jfLbg
+                        ZAIGzGlSCNBmrRl3muD6nW8CAwEAAQ==
+                        -----END PUBLIC KEY-----
+                        -----BEGIN PUBLIC KEY-----
+                        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAERxLYOVq/kBeE05mUZqTk85CaOpSC
+                        CdYeLlCt+K941eQgNWQLBdMiDPnicw5i9o278apo/OLD5AZVSX8ZXPYkKQ==
+                        -----END PUBLIC KEY-----
+                        -----BEGIN PUBLIC KEY-----
+                        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhEQ9X1j2d7qDHEXJRbYnAcYMhGop
+                        OBhknIvSWQYhOpiH74CtJX4/KKPOQJxmb+ZHdZjC9GQZzxyayp2EvLF2Og==
+                        -----END PUBLIC KEY-----
+                        -----BEGIN PUBLIC KEY-----
+                        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwFTRXl79xRiAFa5ZX4aZ7Vkdqmji
+                        5WY0zqc3bd6B08CsNftlYsu2gAqdWm0IlzoQpi2Zi5C437RTg/DgLQ6Bkg==
+                        -----END PUBLIC KEY-----
+                        -----BEGIN PUBLIC KEY-----
+                        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEk7SZsq0qI9ukDLjuBksbOvYy5iaf
+                        WKf1CA2/+bg/vUW/0INnacmXnTOXjVsFv+1tWb0BoBostFzTI3lWTnbKJQ==
+                        -----END PUBLIC KEY-----
+                      signatureAlgorithm: sha256
+                    signatureAlgorithm: sha256
       sma-zk-kafka:
         kafkaPVCSize: 65Gi
         zkPVCSize: 1Gi
@@ -601,6 +658,34 @@ spec:
         kafkaReqCPU: "5"
         kafkaReqMem: 6Gi
         javaMinHeapSize: 5g
+      sma-vm-cluster:
+        vmselect:
+          resources:
+            limits:
+              cpu: 4
+              memory: 12Gi
+            requests:
+              cpu: 2
+              memory: 4Gi
+        vminsert:
+          resources:
+            limits:
+              cpu: 4
+              memory: 12Gi
+            requests:
+              cpu: 2
+              memory: 4Gi
+        vmstorage:
+          persistentVolume:
+            size: 1.6Ti
+            storageClass: sma-block-replicated
+          resources:
+            limits:
+              cpu: 8
+              memory: 16Gi
+            requests:
+              cpu: 4
+              memory: 8Gi
       sma-postgres-cluster:
         pgReqMem: 4Gi
         pgReqCPU: "2"
@@ -616,6 +701,17 @@ spec:
           storage: 5Gi
           storageClass: sma-block-replicated
       sma-elasticsearch:
+        esJavaOpts: -Xmx30g -Xms30g
+        resources:
+          requests:
+            cpu: "4"
+            memory: 16Gi
+        volumeClaimTemplate:
+          storageClassName: sma-block-replicated
+          resources:
+            requests:
+              storage: 188Gi
+      sma-opensearch:
         esJavaOpts: -Xmx30g -Xms30g
         resources:
           requests:
@@ -670,11 +766,20 @@ spec:
                 requests:
                   cpu: "1"
                   memory: 2Gi
-      sma-dashboards:
+      sma-opensearch-dashboards:
         externalAuthority: sma-dashboards.cmn.{{ network.dns.external }}
         cray-service:
           containers:
             sma-dashboards:
+              resources:
+                requests:
+                  cpu: "1"
+                  memory: 2Gi
+      sma-pcim:
+        externalAuthority: sma-pcim.cmn.{{ network.dns.external }}
+        cray-service:
+          containers:
+            sma-pcim:
               resources:
                 requests:
                   cpu: "1"
@@ -731,8 +836,6 @@ spec:
         ingresses:
           ingressgateway:
             issuers:
-              shasta-cmn: https://api.cmn.{{ network.dns.external }}/keycloak/realms/shasta
-              keycloak-cmn: https://auth.cmn.{{ network.dns.external }}/keycloak/realms/shasta
               shasta-nmn: https://api.nmnlb.{{ network.dns.external }}/keycloak/realms/shasta
               keycloak-nmn: https://auth.nmnlb.{{ network.dns.external }}/keycloak/realms/shasta
           ingressgateway-customer-admin:
@@ -758,6 +861,38 @@ spec:
           - '{{ kubernetes.sealed_secrets.keycloak_users_localize | toYaml }}'
       cray-hms-bss:
         addvertisAddress: http://{{ network.netstaticips.nmn_api_gw_local }}:8888
+        cray-service:
+          containers:
+            cray-bss:
+              env:
+              - name: HSM_URL
+                value: http://cray-smd
+              - name: NFD_URL
+                value: http://cray-hmnfd
+              - name: SPIRE_TOKEN_URL
+                value: https://cray-spire-tokens.spire:54440
+              - name: S3_ENDPOINT
+                valueFrom:
+                  secretKeyRef:
+                    key: http_s3_endpoint
+                    name: bss-s3-credentials
+              - name: S3_BUCKET
+                value: boot-image
+              - name: S3_ACCESS_KEY
+                valueFrom:
+                  secretKeyRef:
+                    key: access_key
+                    name: bss-s3-credentials
+              - name: S3_SECRET_KEY
+                valueFrom:
+                  secretKeyRef:
+                    key: secret_key
+                    name: bss-s3-credentials
+              - name: BSS_ADVERTISE_ADDRESS
+                valueFrom:
+                  configMapKeyRef:
+                    key: addvertisAddress
+                    name: bss-env-config
       gatekeeper-policy-manager:
         gatekeeper-policy-manager:
           externalAuthority: opa-gpm.cmn.{{ network.dns.external }}
@@ -771,3 +906,11 @@ spec:
             - '{{ kubernetes.sealed_secrets.powerdns | toYaml }}'
       cray-nls:
         externalHostname: "cmn.{{ network.dns.external }}"
+      cray-hubble:
+        externalHostname: hubble.cmn.{{ network.dns.external }}
+      rack-resiliency:
+        enabled: false
+        # If k8s_zone_prefix is not updated, by default it will be having the rack-id as the zone name
+        k8s_zone_prefix: ""
+        # If ceph_zone_prefix is not updated, by default it will be having the rack-id as the zone name
+        ceph_zone_prefix: ""
