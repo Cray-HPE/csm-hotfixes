@@ -1,8 +1,0 @@
-https://arti.dev.cray.com/artifactory/csm-helm-stable-local/:
-  charts:
-    cray-psp:
-    - 0.1.2
-    spire:
-    - 0.8.17
-    spire-intermediate:
-    - 0.2.2
