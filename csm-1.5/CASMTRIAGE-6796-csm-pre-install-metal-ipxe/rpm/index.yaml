@@ -1,3 +1,0 @@
-https://artifactory.algol60.net/artifactory/csm-rpms/hpe/stable/noos/:
-  rpms:
-    - metal-ipxe-2.4.103-1.noarch
