@@ -1,1 +1,0 @@
-../../../csm-1.4/CASMCMS-9044-bos-cfs-scale/lib/setup-nexus.sh
