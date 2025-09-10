@@ -1,6 +1,0 @@
-https://artifactory.algol60.net/artifactory/csm-rpms/hpe/stable/noos:
-  rpms:
-    - bos-reporter-2.10.31-1.noarch
-    - cray-cmstools-crayctldeploy-1.16.4-1.x86_64
-    - craycli-0.82.19-1.aarch64
-    - craycli-0.82.19-1.x86_64
