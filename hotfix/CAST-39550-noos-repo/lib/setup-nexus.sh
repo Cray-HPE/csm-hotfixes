@@ -29,6 +29,8 @@ source "${ROOTDIR}/lib/install.sh"
 
 requires curl jq
 
+artifactsList=$(mktemp "${ROOTDIR}/hotfix.XXXXXX.json")
+
 load-install-deps
 
 # Deletes any given nexus repository by name.
@@ -73,34 +75,31 @@ function get-artifact-list {
         echo >&2 'Can not get artifacts, no repository name was resolved.'
         return 1
     fi
-
     local items
     local continuationToken
+    local tmpFile
+    tmpFile=$(mktemp "${ROOTDIR}/hotfix.tmpfile.XXXXXX.json")
     response="$(curl -fLs -u "${NEXUS_USERNAME}:${NEXUS_PASSWORD}" -X GET "${NEXUS_URL}/service/rest/v1/components?repository=${repo_name}")"
     continuationToken="$(jq -n --argjson response "$response" -r '$response.continuationToken')"
-    items="$(jq -n --argjson response "$response" -r '$response.items')"
+    jq -n --argjson response "$response" -r '$response.items' > "$artifactsList"
     while [ "$continuationToken" != 'null' ]; do
         response="$(curl -fLs -u "${NEXUS_USERNAME}:${NEXUS_PASSWORD}" -X GET "${NEXUS_URL}/service/rest/v1/components?repository=${repo_name}&continuationToken=${continuationToken}")"
         continuationToken="$(jq -n --argjson response "$response" -r '$response.continuationToken')"
-        items="$(jq -n --argjson items "$items" --argjson response "$response" '$items + $response.items')"
+        # Write current artifacts list as a sequence of items to temporary file
+        cat "$artifactsList" | jq -r '.[]' > "$tmpFile"
+        # Now slurpfile can read the temporary file and convert the sequence of items back into an array
+        jq -n --slurpfile items "$tmpFile" --argjson response "$response" '$items + $response.items' > "$artifactsList"
     done
-    echo "$items"
 }
 
 # Downloads items based on the Nexus components payload structure and returns their download location.
 function download-items {
     nexus-get-credential
-    local items
     local decoded
     local artifact_path
     local download_url
-    items="$1"
-    if [ -z "$items" ]; then
-        echo >&2 'No items to download!'
-        return 1
-    fi
     workdir="$ROOTDIR/$(mktemp -d .rpm-XXXXXXX)"
-    for item in $(jq -r '.[] | @base64' <(echo "$items")); do
+    for item in $(cat "$artifactsList" | jq -r '.[] | @base64'); do
         decoded="$(echo "$item" | base64 --decode | jq -r)"
         dir="${workdir}$(jq -r '.group' <(echo "$decoded"))"
         mkdir -p "$dir"
@@ -129,8 +128,8 @@ if [ -d "${ROOTDIR}/$repository" ]; then
 fi
 
 printf "Resolving artifacts ... "
-artifacts=$(get-artifact-list "$repository")
-if [ -n "$artifacts" ]; then
+get-artifact-list "$repository"
+if [[ $(cat "$artifactsList" | jq 'length') -gt 0 ]]; then
     echo 'Done'
 else
     echo 'Failed!'
@@ -138,7 +137,7 @@ else
 fi
 
 printf 'Downloading resolved artifacts ... '
-downloads="$(download-items "$artifacts")"
+downloads="$(download-items)"
 if [ ! -d "$downloads" ]; then
     echo 'Failed!'
     exit 1
