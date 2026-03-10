@@ -1,0 +1,21 @@
+artifactory.algol60.net/csm-docker/stable:
+  tls-verify: true
+  images:
+    cray-aee:
+    - 1.17.1
+    cray-cfs:
+    - 1.23.7
+    cray-cfs-operator:
+    - 1.27.2
+    cray-postgres-db-backup:
+    - 0.2.3
+    docker-kubectl:
+    - 1.24.17
+    docker.io/library/busybox:
+    - 1.28.0-glibc
+    docker.io/library/postgres:
+    - 13.2-alpine
+    docker.io/library/redis:
+    - 5.0-alpine
+    registry.opensource.zalan.do/acid/pgbouncer:
+    - master-21
