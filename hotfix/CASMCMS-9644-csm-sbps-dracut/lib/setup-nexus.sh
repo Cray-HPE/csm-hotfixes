@@ -75,6 +75,7 @@ function get-artifact-list {
     fi
 
     local items
+    local new_items
     local continuationToken
     response="$(curl -fLs -u "${NEXUS_USERNAME}:${NEXUS_PASSWORD}" -X GET "${NEXUS_URL}/service/rest/v1/components?repository=${repo_name}")"
     continuationToken="$(jq -n --argjson response "$response" -r '$response.continuationToken')"
@@ -82,7 +83,12 @@ function get-artifact-list {
     while [ "$continuationToken" != 'null' ]; do
         response="$(curl -fLs -u "${NEXUS_USERNAME}:${NEXUS_PASSWORD}" -X GET "${NEXUS_URL}/service/rest/v1/components?repository=${repo_name}&continuationToken=${continuationToken}")"
         continuationToken="$(jq -n --argjson response "$response" -r '$response.continuationToken')"
-        items="$(jq -n --argjson items "$items" --argjson response "$response" '$items + $response.items')"
+        new_items="$(jq -n --argjson items "$items" --argjson response "$response" '$items + $response.items')"
+        if [ -n "$new_items" ]; then
+          items="$new_items"
+        else
+          echo "new_items was empty on response: $response"
+        fi
     done
     echo "$items"
 }
