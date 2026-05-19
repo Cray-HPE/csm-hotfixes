@@ -1,6 +1,8 @@
 https://artifactory.algol60.net/artifactory/csm-helm-charts/stable:
   charts:
     cray-cfs-api:
-    - 1.23.7
+    - 1.23.8
+    cray-cfs-batcher:
+    - 1.12.1
     cray-cfs-operator:
-    - 1.27.2
+    - 1.27.4
