@@ -9,12 +9,15 @@ jobs being created for the same CFS session.
 
 This hotfix modifies CFS and cfs-operator to prevent a second Kubernetes job
 from being created for a CFS session, if one has already been created.
+It also adds additional debug logging statements to CFS, cfs-batcher,
+and cfs-operator.
 
 ## Hotfix chart versions
 
 | *Chart*             | *Namespace* | *Version* |
-| `cray-cfs-api`      | `services`  | `1.23.7`  |
-| `cray-cfs-operator` | `services`  | `1.27.2`  |
+| `cray-cfs-api`      | `services`  | `1.23.8`  |
+| `cray-cfs-batcher`  | `services`  | `1.12.1`  |
+| `cray-cfs-operator` | `services`  | `1.27.4`  |
 
 ## Prerequisites
 
@@ -52,8 +55,11 @@ function rollback-chart-cast-39551
 }
 
 # Rollback CFS
-rollback-chart-cast-39551 cray-cfs-api 1.23.7
+rollback-chart-cast-39551 cray-cfs-api 1.23.8
+
+# Rollback cfs-batcher
+rollback-chart-cast-39551 cray-cfs-batcher 1.12.1
 
 # Rollback cfs-operator
-rollback-chart-cast-39551 cray-cfs-operator 1.27.2
+rollback-chart-cast-39551 cray-cfs-operator 1.27.4
 ```
