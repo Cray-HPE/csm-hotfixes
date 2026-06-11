@@ -4,11 +4,11 @@ artifactory.algol60.net/csm-docker/stable:
     cray-aee:
     - 1.17.1
     cray-cfs:
-    - 1.23.8
+    - 1.23.9
     cray-cfs-batcher:
-    - 1.12.1
+    - 1.12.2
     cray-cfs-operator:
-    - 1.27.4
+    - 1.27.5
     cray-postgres-db-backup:
     - 0.2.3
     docker-kubectl:

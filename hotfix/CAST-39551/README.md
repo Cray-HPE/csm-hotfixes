@@ -15,9 +15,9 @@ and cfs-operator.
 ## Hotfix chart versions
 
 | *Chart*             | *Namespace* | *Version* |
-| `cray-cfs-api`      | `services`  | `1.23.8`  |
-| `cray-cfs-batcher`  | `services`  | `1.12.1`  |
-| `cray-cfs-operator` | `services`  | `1.27.4`  |
+| `cray-cfs-api`      | `services`  | `1.23.9`  |
+| `cray-cfs-batcher`  | `services`  | `1.12.2`  |
+| `cray-cfs-operator` | `services`  | `1.27.5`  |
 
 ## Prerequisites
 
@@ -55,11 +55,11 @@ function rollback-chart-cast-39551
 }
 
 # Rollback CFS
-rollback-chart-cast-39551 cray-cfs-api 1.23.8
+rollback-chart-cast-39551 cray-cfs-api 1.23.9
 
 # Rollback cfs-batcher
-rollback-chart-cast-39551 cray-cfs-batcher 1.12.1
+rollback-chart-cast-39551 cray-cfs-batcher 1.12.2
 
 # Rollback cfs-operator
-rollback-chart-cast-39551 cray-cfs-operator 1.27.4
+rollback-chart-cast-39551 cray-cfs-operator 1.27.5
 ```
