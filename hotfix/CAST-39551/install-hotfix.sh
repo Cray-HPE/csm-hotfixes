@@ -47,7 +47,7 @@ spec:
       location: https://packages.local/repository/charts
   charts:
   - name: cray-cfs-batcher
-    version: 1.12.2
+    version: 1.12.3
     source: nexus
     namespace: services
   - name: cray-cfs-operator
