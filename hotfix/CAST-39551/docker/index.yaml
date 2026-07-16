@@ -6,7 +6,7 @@ artifactory.algol60.net/csm-docker/stable:
     cray-cfs:
     - 1.23.9
     cray-cfs-batcher:
-    - 1.12.2
+    - 1.12.3
     cray-cfs-operator:
     - 1.27.5
     cray-postgres-db-backup:
