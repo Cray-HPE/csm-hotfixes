@@ -55,7 +55,7 @@ spec:
     source: nexus
     namespace: services
   - name: cray-cfs-api
-    version: 1.23.9
+    version: 1.23.10
     source: nexus
     namespace: services
 EOF
