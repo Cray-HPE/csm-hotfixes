@@ -18,7 +18,7 @@ jobs being created for the same CFS session.
 ## Hotfix chart versions
 
 | *Chart*             | *Namespace* | *Version* |
-| `cray-cfs-api`      | `services`  | `1.23.9`  |
+| `cray-cfs-api`      | `services`  | `1.23.10`  |
 | `cray-cfs-batcher`  | `services`  | `1.12.3`  |
 | `cray-cfs-operator` | `services`  | `1.27.5`  |
 
@@ -58,7 +58,7 @@ function rollback-chart-cast-39551
 }
 
 # Rollback CFS
-rollback-chart-cast-39551 cray-cfs-api 1.23.9
+rollback-chart-cast-39551 cray-cfs-api 1.23.10
 
 # Rollback cfs-batcher
 rollback-chart-cast-39551 cray-cfs-batcher 1.12.3
